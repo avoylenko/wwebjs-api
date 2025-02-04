@@ -7,7 +7,7 @@ services:
     image: avoylenko/wwebjs-api:latest # Pull the image from Docker Hub
     restart: always
     ports:
-      - "3000:3000"
+      - "3111:3000"
     environment:
       # - API_KEY=your_global_api_key_here  # OPTIONAL
       - BASE_WEBHOOK_URL=http://localhost:3000/localCallbackExample

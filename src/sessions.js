@@ -2,40 +2,60 @@ const { Client, LocalAuth } = require('whatsapp-web.js')
 const fs = require('fs')
 const path = require('path')
 const sessions = new Map()
-const { baseWebhookURL, sessionFolderPath, maxAttachmentSize, setMessagesAsSeen, webVersion, webVersionCacheType, recoverSessions, chromeBin, headless, releaseBrowserLock } = require('./config')
+const { 
+  baseWebhookURL, 
+  sessionFolderPath, 
+  maxAttachmentSize, 
+  setMessagesAsSeen, 
+  webVersion, 
+  webVersionCacheType, 
+  recoverSessions, 
+  chromeBin, 
+  headless, 
+  releaseBrowserLock 
+} = require('./config')
 const { triggerWebhook, waitForNestedObject, checkIfEventisEnabled, sendMessageSeenStatus } = require('./utils')
 const { logger } = require('./logger')
 const { initWebSocketServer, terminateWebSocketServer, triggerWebSocket } = require('./websocket')
 
-// Function to validate if the session is ready
+/**
+ * Validates if the session is ready by checking:
+ *  - The session exists in our map
+ *  - The puppeteer page is available and evaluable.
+ *  - The session state is "CONNECTED"
+ */
 const validateSession = async (sessionId) => {
   try {
     const returnData = { success: false, state: null, message: '' }
 
-    // Session not Connected 😢
+    // Session not found in our sessions map
     if (!sessions.has(sessionId) || !sessions.get(sessionId)) {
       returnData.message = 'session_not_found'
       return returnData
     }
 
     const client = sessions.get(sessionId)
-    // wait until the client is created
+    // Wait until the client has a pupPage object
     await waitForNestedObject(client, 'pupPage')
-      .catch((err) => { return { success: false, state: null, message: err.message } })
+      .catch((err) => { 
+        return { success: false, state: null, message: err.message } 
+      })
 
-    // Wait for client.pupPage to be evaluable
+    // Validate the page is not closed and evaluable
     let maxRetry = 0
     while (true) {
       try {
-        if (client.pupPage.isClosed()) {
+        if (!client.pupPage || client.pupPage.isClosed()) {
           return { success: false, state: null, message: 'browser tab closed' }
         }
+        // Attempt a simple evaluation with a timeout fallback
         await Promise.race([
-          client.pupPage.evaluate('1'),
+          client.pupPage.evaluate(() => 1),
           new Promise(resolve => setTimeout(resolve, 1000))
         ])
         break
       } catch (error) {
+        logger.warn({ sessionId, error }, 'Evaluation error during session validation.')
         if (maxRetry === 2) {
           return { success: false, state: null, message: 'session closed' }
         }
@@ -50,7 +70,7 @@ const validateSession = async (sessionId) => {
       return returnData
     }
 
-    // Session Connected 🎉
+    // Session is successfully connected
     returnData.success = true
     returnData.message = 'session_connected'
     return returnData
@@ -60,7 +80,10 @@ const validateSession = async (sessionId) => {
   }
 }
 
-// Function to handle client session restoration
+/**
+ * Restores any sessions from the session folder. This scans the session folder
+ * for directories matching "session-*" and reinitializes them.
+ */
 const restoreSessions = () => {
   try {
     if (!fs.existsSync(sessionFolderPath)) {
@@ -68,13 +91,13 @@ const restoreSessions = () => {
     }
     // Read the contents of the folder
     fs.readdir(sessionFolderPath, async (_, files) => {
-      // Iterate through the files in the parent folder
+      // Iterate through each folder in the session folder
       for (const file of files) {
-        // Use regular expression to extract the string from the folder name
+        // Extract sessionId from folder name
         const match = file.match(/^session-(.+)$/)
         if (match) {
           const sessionId = match[1]
-          logger.warn({ sessionId }, 'existing session detected')
+          logger.warn({ sessionId }, 'Existing session detected; attempting restoration.')
           await setupSession(sessionId)
         }
       }
@@ -84,14 +107,16 @@ const restoreSessions = () => {
   }
 }
 
-// Setup Session
+/**
+ * Sets up a new client session.
+ */
 const setupSession = async (sessionId) => {
   try {
     if (sessions.has(sessionId)) {
       return { success: false, message: `Session already exists for: ${sessionId}`, client: sessions.get(sessionId) }
     }
 
-    // Disable the delete folder from the logout function (will be handled separately)
+    // Use LocalAuth for session data; disable logout from LocalAuth (to avoid deletion of files during logout)
     const localAuth = new LocalAuth({ clientId: sessionId, dataPath: sessionFolderPath })
     delete localAuth.logout
     localAuth.logout = () => { }
@@ -128,11 +153,11 @@ const setupSession = async (sessionId) => {
 
     const client = new Client(clientOptions)
     if (releaseBrowserLock) {
-      // See https://github.com/puppeteer/puppeteer/issues/4860
+      // Remove the SingletonLock file if it exists to avoid lock issues (see Puppeteer issue #4860)
       const singletonLockPath = path.resolve(path.join(sessionFolderPath, `session-${sessionId}`, 'SingletonLock'))
       const singletonLockExists = await fs.promises.lstat(singletonLockPath).then(() => true).catch(() => false)
       if (singletonLockExists) {
-        logger.warn({ sessionId }, 'Browser lock file exists, removing')
+        logger.warn({ sessionId }, 'Browser lock file exists, removing.')
         await fs.promises.unlink(singletonLockPath)
       }
     }
@@ -144,7 +169,9 @@ const setupSession = async (sessionId) => {
       throw error
     }
 
+    // Start the WebSocket server for this session
     initWebSocketServer(sessionId)
+    // Initialize client event listeners
     initializeEvents(client, sessionId)
 
     // Save the session to the Map
@@ -155,30 +182,36 @@ const setupSession = async (sessionId) => {
   }
 }
 
+/**
+ * Initializes events for the client.
+ * Events include handling page closure, errors, and various WhatsApp events.
+ */
 const initializeEvents = (client, sessionId) => {
-  // check if the session webhook is overridden
+  // Set the webhook URL; allow for environment override per session
   const sessionWebhook = process.env[sessionId.toUpperCase() + '_WEBHOOK_URL'] || baseWebhookURL
 
   if (recoverSessions) {
     waitForNestedObject(client, 'pupPage').then(() => {
       const restartSession = async (sessionId) => {
         sessions.delete(sessionId)
-        await client.destroy().catch(e => { })
+        await client.destroy().catch(e => { logger.error({ sessionId, err: e }, 'Error during client destroy'); })
         await setupSession(sessionId)
       }
+      // Listen for page close and error events to restart session
       client.pupPage.once('close', function () {
-        // emitted when the page closes
-        logger.warn({ sessionId }, 'Browser page closed. Restoring')
+        logger.warn({ sessionId }, 'Browser page closed. Restoring session.')
         restartSession(sessionId)
       })
       client.pupPage.once('error', function () {
-        // emitted when the page crashes
-        logger.warn({ sessionId }, 'Error occurred on browser page. Restoring')
+        logger.warn({ sessionId }, 'Browser page error occurred. Restoring session.')
         restartSession(sessionId)
       })
-    }).catch(e => { })
+    }).catch(e => { 
+      logger.error({ sessionId, err: e }, 'Error waiting for pupPage.') 
+    })
   }
 
+  // Register events only if enabled
   checkIfEventisEnabled('auth_failure')
     .then(_ => {
       client.on('auth_failure', (msg) => {
@@ -282,7 +315,6 @@ const initializeEvents = (client, sessionId) => {
         triggerWebhook(sessionWebhook, sessionId, 'message', { message })
         triggerWebSocket(sessionId, 'message', { message })
         if (message.hasMedia && message._data?.size < maxAttachmentSize) {
-          // custom service event
           checkIfEventisEnabled('media').then(_ => {
             message.downloadMedia().then(messageMedia => {
               triggerWebhook(sessionWebhook, sessionId, 'media', { messageMedia, message })
@@ -360,12 +392,11 @@ const initializeEvents = (client, sessionId) => {
       })
     })
 
+  // QR code events
   client.on('qr', (qr) => {
-    // by default QR code is being updated every 20 seconds
     if (client.qrClearTimeout) {
       clearTimeout(client.qrClearTimeout)
     }
-    // inject qr code into session
     client.qr = qr
     client.qrClearTimeout = setTimeout(() => {
       if (client.qr) {
@@ -429,17 +460,17 @@ const initializeEvents = (client, sessionId) => {
     })
 }
 
-// Function to delete client session folder
+/**
+ * Deletes the client session folder safely, ensuring no directory traversal is possible.
+ */
 const deleteSessionFolder = async (sessionId) => {
   try {
     const targetDirPath = path.join(sessionFolderPath, `session-${sessionId}`)
     const resolvedTargetDirPath = await fs.promises.realpath(targetDirPath)
     const resolvedSessionPath = await fs.promises.realpath(sessionFolderPath)
 
-    // Ensure the target directory path ends with a path separator
+    // Ensure the target directory path is a subdirectory of the session folder
     const safeSessionPath = `${resolvedSessionPath}${path.sep}`
-
-    // Validate the resolved target directory path is a subdirectory of the session folder path
     if (!resolvedTargetDirPath.startsWith(safeSessionPath)) {
       throw new Error('Invalid path: Directory traversal detected')
     }
@@ -450,13 +481,16 @@ const deleteSessionFolder = async (sessionId) => {
   }
 }
 
-// Function to reload client session without removing browser cache
+/**
+ * Reloads the session without removing the browser cache.
+ */
 const reloadSession = async (sessionId) => {
   try {
     const client = sessions.get(sessionId)
     if (!client) {
       return
     }
+    // Remove page event listeners to avoid duplicate calls
     client.pupPage?.removeAllListeners('close')
     client.pupPage?.removeAllListeners('error')
     try {
@@ -480,6 +514,10 @@ const reloadSession = async (sessionId) => {
   }
 }
 
+/**
+ * Deletes the session. It first attempts to gracefully logout/destroy the client,
+ * then waits a few seconds for the browser process to disconnect before deleting the session folder.
+ */
 const deleteSession = async (sessionId, validation) => {
   try {
     const client = sessions.get(sessionId)
@@ -494,15 +532,13 @@ const deleteSession = async (sessionId, validation) => {
       logger.error({ sessionId, err: error }, 'Failed to terminate WebSocket server')
     }
     if (validation.success) {
-      // Client Connected, request logout
       logger.info({ sessionId }, 'Logging out session')
       await client.logout()
     } else if (validation.message === 'session_not_connected') {
-      // Client not Connected, request destroy
       logger.info({ sessionId }, 'Destroying session')
       await client.destroy()
     }
-    // Wait 10 secs for client.pupBrowser to be disconnected before deleting the folder
+    // Wait for up to 10 seconds for the browser to disconnect
     let maxDelay = 0
     while (client.pupBrowser.isConnected() && (maxDelay < 10)) {
       await new Promise(resolve => setTimeout(resolve, 1000))
@@ -516,14 +552,14 @@ const deleteSession = async (sessionId, validation) => {
   }
 }
 
-// Function to handle session flush
+/**
+ * Flushes sessions by iterating through the session folder and deleting sessions
+ * that are either inactive or all sessions (depending on the deleteOnlyInactive flag).
+ */
 const flushSessions = async (deleteOnlyInactive) => {
   try {
-    // Read the contents of the sessions folder
     const files = await fs.promises.readdir(sessionFolderPath)
-    // Iterate through the files in the parent folder
     for (const file of files) {
-      // Use regular expression to extract the string from the folder name
       const match = file.match(/^session-(.+)$/)
       if (match) {
         const sessionId = match[1]
