@@ -14,7 +14,7 @@
     "express": "^4.21.1",
     "express-rate-limit": "^7.4.1",
     "pino": "^9.5.0",
-    "qr-image": "^3.2.0",
+    "qrcode": "^1.5.4",
     "qrcode-terminal": "^0.12.0",
     "swagger-ui-express": "^5.0.1",
     "whatsapp-web.js": "^1.26.1-alpha.3",

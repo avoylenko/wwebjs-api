@@ -11,7 +11,7 @@ const setMessagesAsSeen = (process.env.SET_MESSAGES_AS_SEEN || '').toLowerCase()
 const disabledCallbacks = process.env.DISABLED_CALLBACKS ? process.env.DISABLED_CALLBACKS.split('|') : []
 const enableSwaggerEndpoint = (process.env.ENABLE_SWAGGER_ENDPOINT || '').toLowerCase() === 'true'
 const webVersion = process.env.WEB_VERSION
-const webVersionCacheType = process.env.WEB_VERSION_CACHE_TYPE || 'none'
+const webVersionCacheType = 'remote';
 const rateLimitMax = parseInt(process.env.RATE_LIMIT_MAX) || 1000
 const rateLimitWindowMs = parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 1000
 const recoverSessions = (process.env.RECOVER_SESSIONS || '').toLowerCase() === 'true'

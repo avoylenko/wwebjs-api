@@ -1,4 +1,3 @@
-const qr = require('qr-image')
 const { setupSession, deleteSession, reloadSession, validateSession, flushSessions, sessions } = require('../sessions')
 const { sendErrorResponse, waitForNestedObject } = require('../utils')
 const { logger } = require('../logger')
@@ -126,35 +125,25 @@ const sessionQrCode = async (req, res) => {
  * @throws {Error} If there was an error getting status of the session.
  */
 const sessionQrCodeImage = async (req, res) => {
-  // #swagger.summary = 'Get session QR code as image'
-  // #swagger.description = 'QR code as image of the session with the given session ID.'
-  const sessionId = req.params.sessionId
+  const sessionId = req.params.sessionId;
   try {
-    const session = sessions.get(sessionId)
+    const session = sessions.get(sessionId);
     if (!session) {
-      return res.json({ success: false, message: 'session_not_found' })
+      return res.status(404).json({ success: false, message: 'session_not_found' });
     }
-    if (session.qr) {
-      const qrImage = qr.image(session.qr)
-      /* #swagger.responses[200] = {
-          description: "QR image.",
-          content: {
-            "image/png": {}
-          }
-        }
-      */
+    if (session.qrImage) {
       res.writeHead(200, {
-        'Content-Type': 'image/png'
-      })
-      return qrImage.pipe(res)
+        'Content-Type': 'image/png',
+        'Content-Length': session.qrImage.length
+      });
+      return res.end(session.qrImage); // Send cached image
     }
-    return res.json({ success: false, message: 'qr code not ready or already scanned' })
+    return res.status(404).json({ success: false, message: 'qr code not ready or already scanned' });
   } catch (error) {
-    logger.error({ sessionId, err: error }, 'Failed to get session qr code image')
-    sendErrorResponse(res, 500, error.message)
+    logger.error({ sessionId, err: error }, 'Failed to get QR code image');
+    sendErrorResponse(res, 500, error.message);
   }
-}
-
+};
 /**
  * Restarts the session with the given session ID.
  *

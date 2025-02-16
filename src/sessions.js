@@ -17,6 +17,7 @@ const {
 const { triggerWebhook, waitForNestedObject, checkIfEventisEnabled, sendMessageSeenStatus } = require('./utils')
 const { logger } = require('./logger')
 const { initWebSocketServer, terminateWebSocketServer, triggerWebSocket } = require('./websocket')
+const QRCode = require('qrcode');
 
 /**
  * Validates if the session is ready by checking:
@@ -124,12 +125,20 @@ const setupSession = async (sessionId) => {
     const clientOptions = {
       puppeteer: {
         executablePath: chromeBin,
-        headless,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu', '--disable-dev-shm-usage']
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-gpu',
+          '--disable-dev-shm-usage',
+          '--single-process' // Reduces resource usage
+        ],
+        timeout: 30000 // Increase launch timeout if needed
       },
-      authStrategy: localAuth
-    }
-
+      authStrategy: localAuth,
+      takeoverOnConflict: true, // Handle session conflicts
+      qrMaxRetries: 5, // Limit QR regeneration attempts
+    };
     if (webVersion) {
       clientOptions.webVersion = webVersion
       switch (webVersionCacheType.toLowerCase()) {
@@ -393,24 +402,31 @@ const initializeEvents = (client, sessionId) => {
     })
 
   // QR code events
-  client.on('qr', (qr) => {
-    if (client.qrClearTimeout) {
-      clearTimeout(client.qrClearTimeout)
-    }
-    client.qr = qr
-    client.qrClearTimeout = setTimeout(() => {
-      if (client.qr) {
-        logger.warn({ sessionId }, 'Removing expired QR code')
-        client.qr = null
+  client.on('qr', async (qrData) => {
+    try {
+      // Generate QR code as a buffer
+      const qrImageBuffer = await QRCode.toBuffer(qrData, { type: 'png' });
+      client.qrImage = qrImageBuffer; // Cache the image buffer
+      client.qr = qrData;
+  
+      // Clear previous timeout and set new expiration (60 seconds)
+      if (client.qrClearTimeout) clearTimeout(client.qrClearTimeout);
+      client.qrClearTimeout = setTimeout(() => {
+        client.qr = null;
+        client.qrImage = null;
+        logger.warn({ sessionId }, 'QR code expired');
+      }, 60000);
+  
+      // Emit QR via webhook/websocket
+      if (await checkIfEventisEnabled('qr')) {
+        triggerWebhook(sessionWebhook, sessionId, 'qr', { qr: qrData });
+        triggerWebSocket(sessionId, 'qr', { qr: qrData });
       }
-    }, 30000)
-    checkIfEventisEnabled('qr')
-      .then(_ => {
-        triggerWebhook(sessionWebhook, sessionId, 'qr', { qr })
-        triggerWebSocket(sessionId, 'qr', { qr })
-      })
-  })
-
+    } catch (error) {
+      logger.error({ sessionId, err: error }, 'Failed to generate QR image');
+    }
+  });
+  
   checkIfEventisEnabled('ready')
     .then(_ => {
       client.on('ready', () => {
