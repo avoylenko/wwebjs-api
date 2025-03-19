@@ -472,10 +472,12 @@ const reply = async (req, res) => {
       }
       case 'Poll': {
         contentMessage = new Poll(content.pollName, content.pollOptions, content.options)
+        // fix for poll events not being triggered (open the chat that you sent the poll)
+        await client.interface.openChatWindow(chatId)
         break
       }
       default:
-        return sendErrorResponse(res, 400, 'contentType invalid, must be string, MessageMedia, MessageMediaFromURL, Location, Buttons, List, Contact or Poll')
+        return sendErrorResponse(res, 400, 'contentType invalid, must be string, MessageMedia, MessageMediaFromURL, Location, Contact or Poll')
     }
     const repliedMessage = await message.reply(contentMessage, chatId, options)
     res.json({ success: true, repliedMessage })

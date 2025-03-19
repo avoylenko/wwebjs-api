@@ -64,7 +64,7 @@ const sendMessage = async (req, res) => {
   */
 
   try {
-    const { chatId, content, contentType, options } = req.body
+    const { chatId, content, contentType, options, mediaFromURLOptions = {} } = req.body
     const client = sessions.get(req.params.sessionId)
 
     let messageOut
@@ -79,7 +79,7 @@ const sendMessage = async (req, res) => {
         messageOut = await client.sendMessage(chatId, content, options)
         break
       case 'MessageMediaFromURL': {
-        const messageMediaFromURL = await MessageMedia.fromUrl(content, { unsafeMime: true })
+        const messageMediaFromURL = await MessageMedia.fromUrl(content, { unsafeMime: true, ...mediaFromURLOptions })
         messageOut = await client.sendMessage(chatId, messageMediaFromURL, options)
         break
       }
@@ -102,6 +102,8 @@ const sendMessage = async (req, res) => {
       case 'Poll': {
         const poll = new Poll(content.pollName, content.pollOptions, content.options)
         messageOut = await client.sendMessage(chatId, poll, options)
+        // fix for poll events not being triggered (open the chat that you sent the poll)
+        await client.interface.openChatWindow(chatId)
         break
       }
       default:
@@ -1000,7 +1002,7 @@ const pinChat = async (req, res) => {
           chatId: {
             type: 'string',
             description: 'ID of the chat',
-            example: ''
+            example: '6281288888888@c.us'
           },
         }
       },
@@ -1133,7 +1135,7 @@ const sendSeen = async (req, res) => {
           chatId: {
             type: 'string',
             description: 'ID of the chat',
-            example: ''
+            example: '6281288888888@c.us'
           },
         }
       },
@@ -1210,7 +1212,7 @@ const unarchiveChat = async (req, res) => {
           chatId: {
             type: 'string',
             description: 'ID of the chat',
-            example: ''
+            example: '6281288888888@c.us'
           },
         }
       },
@@ -1249,7 +1251,7 @@ const unmuteChat = async (req, res) => {
           chatId: {
             type: 'string',
             description: 'ID of the chat',
-            example: ''
+            example: '6281288888888@c.us'
           },
         }
       },
@@ -1288,7 +1290,7 @@ const unpinChat = async (req, res) => {
           chatId: {
             type: 'string',
             description: 'ID of the chat',
-            example: ''
+            example: '6281288888888@c.us'
           },
         }
       },
@@ -1532,7 +1534,7 @@ const syncHistory = async (req, res) => {
           chatId: {
             type: 'string',
             description: 'ID of the chat',
-            example: ''
+            example: '6281288888888@c.us'
           },
         }
       },
@@ -1666,6 +1668,45 @@ const getFormattedNumber = async (req, res) => {
   }
 }
 
+/**
+ * Open the chat window.
+ *
+ * @async
+ * @function
+ * @param {Object} req - The HTTP request object containing the chatId and sessionId.
+ * @param {string} req.body.chatId - The unique identifier of the chat to unmute.
+ * @param {string} req.params.sessionId - The unique identifier of the session associated with the client to use.
+ * @param {Object} res - The HTTP response object.
+ * @returns {Promise<Object>} - A Promise that resolves with a JSON object containing a success flag and the result of the operation.
+ * @throws {Error} - If an error occurs during the operation, it is thrown and handled by the catch block.
+ */
+const openChatWindow = async (req, res) => {
+  /*
+    #swagger.summary = 'Open the chat window'
+    #swagger.requestBody = {
+      required: true,
+      schema: {
+        type: 'object',
+        properties: {
+          chatId: {
+            type: 'string',
+            description: 'ID of the chat',
+            example: '6281288888888@c.us'
+          },
+        }
+      },
+    }
+  */
+  try {
+    const { chatId } = req.body
+    const client = sessions.get(req.params.sessionId)
+    await client.interface.openChatWindow(chatId)
+    res.json({ success: true })
+  } catch (error) {
+    sendErrorResponse(res, 500, error.message)
+  }
+}
+
 module.exports = {
   getClassInfo,
   acceptInvite,
@@ -1710,5 +1751,6 @@ module.exports = {
   syncHistory,
   getContactDeviceCount,
   getCountryCode,
-  getFormattedNumber
+  getFormattedNumber,
+  openChatWindow
 }

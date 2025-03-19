@@ -9,17 +9,17 @@
     "swagger": "node swagger.js"
   },
   "dependencies": {
-    "axios": "^1.7.8",
     "cors": "^2.8.5",
+    "axios": "^1.8.3",
     "dotenv": "^16.4.5",
-    "express": "^4.21.1",
+    "express": "^4.21.2",
     "express-rate-limit": "^7.4.1",
     "pino": "^9.5.0",
     "qrcode": "^1.5.4",
     "qrcode-terminal": "^0.12.0",
     "swagger-ui-express": "^5.0.1",
     "whatsapp-web.js": "^1.26.1-alpha.3",
-    "ws": "^8.18.0"
+    "ws": "^8.18.1"
   },
   "devDependencies": {
     "eslint": "^8.38.0",

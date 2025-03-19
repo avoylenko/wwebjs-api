@@ -102,6 +102,7 @@ clientRouter.post('/syncHistory/:sessionId', [middleware.sessionNameValidation, 
 clientRouter.post('/getContactDeviceCount/:sessionId', [middleware.sessionNameValidation, middleware.sessionValidation], clientController.getContactDeviceCount)
 clientRouter.post('/getCountryCode/:sessionId', [middleware.sessionNameValidation, middleware.sessionValidation], clientController.getCountryCode)
 clientRouter.post('/getFormattedNumber/:sessionId', [middleware.sessionNameValidation, middleware.sessionValidation], clientController.getFormattedNumber)
+clientRouter.post('/openChatWindow/:sessionId', [middleware.sessionNameValidation, middleware.sessionValidation], clientController.openChatWindow)
 
 /**
  * ================
