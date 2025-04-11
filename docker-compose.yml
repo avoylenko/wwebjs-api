@@ -11,6 +11,8 @@ services:
         max_attempts: 5
     ports:
       - "3000:3000"
+    env_file:
+      - .env
     environment:
       # --- Application Environment Variables ---
       - BASE_WEBHOOK_URL=http://localhost:3000/localCallbackExample
@@ -42,6 +44,8 @@ services:
     restart: always
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+    env_file:
+      - .env
     environment:
       # --- Monitor Configuration ---
       - TARGET_CONTAINER_NAME=wwebjs_api

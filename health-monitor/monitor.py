@@ -5,9 +5,7 @@ import socket
 import docker
 import smtplib
 import logging
-import pytz
-import textwrap
-from datetime import datetime
+from datetime import datetime, timedelta
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
@@ -33,7 +31,8 @@ SMTP_HOST = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
 SMTP_PORT = int(os.environ.get('SMTP_PORT', 587))
 SMTP_USER = os.environ.get('SMTP_USER', '')
 SMTP_PASS = os.environ.get('SMTP_PASS', '')
-SMTP_TLS = os.environ.get('SMTP_TLS', 'YES').upper() == 'YES'
+# Default to non-SSL connection to fix SSL version issue
+SMTP_TLS = os.environ.get('SMTP_TLS', 'NO').upper() == 'YES'
 SMTP_STARTTLS = os.environ.get('SMTP_STARTTLS', 'YES').upper() == 'YES'
 
 # --- State File ---
@@ -125,9 +124,13 @@ if not EMAIL_TO:
     exit(1)
 
 def get_ist_timestamp():
-    """Get current timestamp in IST timezone."""
-    ist = pytz.timezone('Asia/Kolkata')
-    return datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S %Z")
+    """Get current timestamp in IST timezone (UTC+5:30) without using pytz."""
+    # Calculate IST offset (UTC+5:30)
+    ist_offset = timedelta(hours=5, minutes=30)
+    # Get current UTC time and add the offset
+    utc_time = datetime.utcnow()
+    ist_time = utc_time + ist_offset
+    return ist_time.strftime("%Y-%m-%d %H:%M:%S IST")
 
 def get_container_logs(container_id, tail=100):
     """Get the last N lines of container logs."""
@@ -144,6 +147,10 @@ def get_container_info(container_id):
     """Get detailed information about the container."""
     try:
         client = docker.from_env()
+        # Fix: Ensure container_id is properly validated
+        if not container_id or not isinstance(container_id, str):
+            return {"Error": "Invalid container ID"}
+
         container = client.containers.get(container_id)
         container_data = client.api.inspect_container(container.id)
         
@@ -154,19 +161,47 @@ def get_container_info(container_id):
             "Created": datetime.fromtimestamp(container_data['Created']).strftime('%Y-%m-%d %H:%M:%S'),
             "Status": container.status,
             "State": container_data['State']['Status'],
-            "Ports": container_data['NetworkSettings']['Ports'],
-            "Mounts": [f"{m['Source']} → {m['Destination']}" for m in container_data['Mounts']],
-            "Restart Policy": container_data['HostConfig']['RestartPolicy']['Name'],
         }
         
-        if 'Health' in container_data['State']:
+        # Handle ports safely
+        ports = container_data['NetworkSettings']['Ports']
+        if ports:
+            port_info = []
+            for container_port, host_bindings in ports.items():
+                if host_bindings:
+                    for binding in host_bindings:
+                        port_info.append(f"{binding.get('HostIp', '0.0.0.0')}:{binding.get('HostPort', '?')} → {container_port}")
+                else:
+                    port_info.append(f"{container_port} (not exposed)")
+            info["Ports"] = port_info
+        else:
+            info["Ports"] = ["None"]
+            
+        # Handle mounts safely
+        mounts = container_data.get('Mounts', [])
+        if mounts:
+            info["Mounts"] = [f"{m.get('Source', '?')} → {m.get('Destination', '?')}" for m in mounts]
+        else:
+            info["Mounts"] = ["None"]
+            
+        # Get restart policy
+        restart_policy = container_data.get('HostConfig', {}).get('RestartPolicy', {}).get('Name', 'unknown')
+        info["Restart Policy"] = restart_policy
+        
+        # Handle health checks safely
+        if 'Health' in container_data.get('State', {}):
             health = container_data['State']['Health']
-            info["Health Status"] = health['Status']
-            if 'FailingStreak' in health:
-                info["Failing Streak"] = health['FailingStreak']
-            if len(health['Log']) > 0:
-                last_check = health['Log'][-1]
-                info["Last Health Check"] = last_check['Output'].strip()
+            info["Health Status"] = health.get('Status', 'unknown')
+            
+            failing_streak = health.get('FailingStreak')
+            if failing_streak is not None:
+                info["Failing Streak"] = failing_streak
+                
+            health_logs = health.get('Log', [])
+            if health_logs and len(health_logs) > 0:
+                last_check = health_logs[-1]
+                if 'Output' in last_check:
+                    info["Last Health Check"] = last_check['Output'].strip()
                 
         return info
     except Exception as e:
@@ -205,16 +240,9 @@ def create_email_body_html(status, is_alert=True, container_info=None, logs=None
         
         for key, value in container_info.items():
             if key == "Mounts" and isinstance(value, list):
-                html += f'<tr><td>{key}</td><td>{", ".join(value[:3])}{"..." if len(value) > 3 else ""}</td></tr>'
-            elif key == "Ports" and value:
-                port_info = []
-                for container_port, host_bindings in value.items():
-                    if host_bindings:
-                        for binding in host_bindings:
-                            port_info.append(f"{binding['HostIp']}:{binding['HostPort']} → {container_port}")
-                    else:
-                        port_info.append(f"{container_port} (not exposed)")
-                html += f'<tr><td>{key}</td><td>{", ".join(port_info[:3])}{"..." if len(port_info) > 3 else ""}</td></tr>'
+                html += f'<tr><td>{key}</td><td>{", ".join(str(v) for v in value[:3])}{"..." if len(value) > 3 else ""}</td></tr>'
+            elif key == "Ports" and isinstance(value, list):
+                html += f'<tr><td>{key}</td><td>{", ".join(str(v) for v in value[:3])}{"..." if len(value) > 3 else ""}</td></tr>'
             else:
                 html += f'<tr><td>{key}</td><td>{value}</td></tr>'
         
@@ -246,11 +274,13 @@ def create_email_body_text(status, is_alert=True, container_info=None, logs=None
     body.append(f"The container '{TARGET_CONTAINER_NAME}' is reporting as {status}.")
     body.append("")
     
+    # Add system information
     body.append("SYSTEM INFORMATION:")
     body.append(f"Timestamp: {ist_timestamp}")
     body.append(f"Monitor Host: {hostname}")
     body.append("")
     
+    # Add container details if available
     if container_info:
         body.append("CONTAINER DETAILS:")
         for key, value in container_info.items():
@@ -280,14 +310,17 @@ def send_email(subject, status, is_alert=True, container_id=None):
         if is_alert:  # Only include logs for alerts, not recovery
             logs = get_container_logs(container_id, tail=LOG_LINES)
     
+    # Create message
     msg = MIMEMultipart("alternative")
     msg['From'] = EMAIL_FROM
     msg['To'] = EMAIL_TO
     msg['Subject'] = f"{EMAIL_SUBJECT_PREFIX} {subject}"
     
+    # Plain text version
     text_body = create_email_body_text(status, is_alert, container_info, logs)
     msg.attach(MIMEText(text_body, 'plain'))
     
+    # HTML version
     html_body = create_email_body_html(status, is_alert, container_info, logs)
     msg.attach(MIMEText(html_body, 'html'))
     
@@ -299,19 +332,29 @@ def send_email(subject, status, is_alert=True, container_id=None):
         msg.attach(log_attachment)
     
     try:
-        # Connect to SMTP server
-        if SMTP_TLS:
-            server = smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT)
-        else:
-            server = smtplib.SMTP(SMTP_HOST, SMTP_PORT)
-            if SMTP_STARTTLS:
-                server.starttls()
+        logger.info(f"Attempting to connect to SMTP server {SMTP_HOST}:{SMTP_PORT}")
+        
+        # Try to connect with insecure connection first (to debug SSL issue)
+        server = smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=30)
+        
+        # Log connection success
+        logger.info("SMTP connection established")
+        
+        # Enable extended debug output
+        server.set_debuglevel(1)
+        
+        # Use STARTTLS if configured
+        if SMTP_STARTTLS:
+            logger.info("Attempting STARTTLS")
+            server.starttls()
         
         # Login if credentials provided
         if SMTP_USER and SMTP_PASS:
+            logger.info(f"Logging in as {SMTP_USER}")
             server.login(SMTP_USER, SMTP_PASS)
         
         # Send email
+        logger.info(f"Sending email to {EMAIL_TO}")
         server.send_message(msg)
         server.quit()
         
@@ -390,6 +433,8 @@ Docker Container Health Monitor
 📧 Notifications To:    {EMAIL_TO}
 📤 From Address:        {EMAIL_FROM}
 💻 SMTP Server:         {SMTP_HOST}:{SMTP_PORT}
+{'   '}SSL/TLS:           {'✅ Enabled' if SMTP_TLS else '❌ Disabled'}
+{'   '}STARTTLS:          {'✅ Enabled' if SMTP_STARTTLS else '❌ Disabled'}
 📋 Log Lines:           {LOG_LINES}
 ⏰ Current Time (IST):  {get_ist_timestamp()}
 {'='*70}
