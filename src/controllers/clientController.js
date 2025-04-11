@@ -71,10 +71,11 @@ const sendMessage = async (req, res) => {
     switch (contentType) {
       case 'string':
         if (options?.media) {
-          const media = options.media
-          media.filename = null
-          media.filesize = null
-          options.media = new MessageMedia(media.mimetype, media.data, media.filename, media.filesize)
+          const { mimetype, data, filename = null, filesize = null } = options.media
+          if (!mimetype || !data) {
+            return sendErrorResponse(res, 400, 'invalid media options')
+          }
+          options.media = new MessageMedia(mimetype, data, filename, filesize)
         }
         messageOut = await client.sendMessage(chatId, content, options)
         break

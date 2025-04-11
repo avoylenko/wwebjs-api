@@ -18,7 +18,7 @@
     "qrcode": "^1.5.4",
     "qrcode-terminal": "^0.12.0",
     "swagger-ui-express": "^5.0.1",
-    "whatsapp-web.js": "^1.26.1-alpha.3",
+    "whatsapp-web.js": "^1.27.0",
     "ws": "^8.18.1"
   },
   "devDependencies": {

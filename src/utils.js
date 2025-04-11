@@ -51,10 +51,19 @@ const sendMessageSeenStatus = async (message) => {
   }
 }
 
+const decodeBase64 = function * (base64String) {
+  const chunkSize = 1024
+  for (let i = 0; i < base64String.length; i += chunkSize) {
+    const chunk = base64String.slice(i, i + chunkSize)
+    yield Buffer.from(chunk, 'base64')
+  }
+}
+
 module.exports = {
   triggerWebhook,
   sendErrorResponse,
   waitForNestedObject,
   checkIfEventisEnabled,
-  sendMessageSeenStatus
+  sendMessageSeenStatus,
+  decodeBase64
 }

@@ -352,6 +352,54 @@ const getSessions = async (req, res) => {
   return res.json({ success: true, result: Array.from(sessions.keys()) })
 }
 
+/**
+ * Get pupPage screenshot image
+ *
+ * @function
+ * @async
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ * @returns {Promise<Object>} - A Promise that resolves with a JSON object containing a success flag and the result of the operation.
+ * @throws {Error} If there is an issue setting the profile picture, an error will be thrown.
+ */
+const getPageScreenshot = async (req, res) => {
+  // #swagger.summary = 'Get page screenshot'
+  // #swagger.description = 'Screenshot of the client with the given session ID.'
+  const sessionId = req.params.sessionId
+  try {
+    const session = sessions.get(sessionId)
+    if (!session) {
+      return res.json({ success: false, message: 'session_not_found' })
+    }
+
+    if (!session.pupPage) {
+      return res.json({ success: false, message: 'page_not_ready' })
+    }
+
+    const pngBase64String = await session.pupPage.screenshot({
+      fullPage: true,
+      encoding: 'base64',
+      type: 'png'
+    })
+
+    /* #swagger.responses[200] = {
+        description: "Screenshot image.",
+        content: {
+          "image/png": {}
+        }
+      }
+    */
+    res.writeHead(200, {
+      'Content-Type': 'image/png'
+    })
+    res.write(Buffer.from(pngBase64String, 'base64'))
+    res.end()
+  } catch (error) {
+    logger.error({ sessionId, err: error }, 'Failed to get page screenshot')
+    sendErrorResponse(res, 500, error.message)
+  }
+}
+
 module.exports = {
   startSession,
   statusSession,
@@ -362,5 +410,6 @@ module.exports = {
   terminateSession,
   terminateInactiveSessions,
   terminateAllSessions,
-  getSessions
+  getSessions,
+  getPageScreenshot
 }

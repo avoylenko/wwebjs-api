@@ -1,6 +1,7 @@
 const { MessageMedia, Location, Poll } = require('whatsapp-web.js')
+const { Readable } = require('stream')
 const { sessions } = require('../sessions')
-const { sendErrorResponse } = require('../utils')
+const { sendErrorResponse, decodeBase64 } = require('../utils')
 
 /**
  * Get message by its ID from a given chat using the provided client.
@@ -116,8 +117,57 @@ const downloadMedia = async (req, res) => {
     const client = sessions.get(req.params.sessionId)
     const message = await _getMessageById(client, messageId, chatId)
     if (!message) { throw new Error('Message not found') }
+    if (!message.hasMedia) { throw new Error('Message media not found') }
     const messageMedia = await message.downloadMedia()
     res.json({ success: true, messageMedia })
+  } catch (error) {
+    sendErrorResponse(res, 500, error.message)
+  }
+}
+
+/**
+ * Downloads media from a message and sends it as binary data.
+ * @async
+ * @function
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ * @param {string} req.params.sessionId - The session ID.
+ * @param {string} req.body.messageId - The message ID.
+ * @param {string} req.body.chatId - The chat ID.
+ * @returns {Promise<void>} - A Promise that resolves with no value when the function completes.
+ */
+const downloadMediaAsData = async (req, res) => {
+  /*
+    #swagger.summary = 'Download attached message media as binary data'
+  */
+  try {
+    const { messageId, chatId } = req.body
+    const client = sessions.get(req.params.sessionId)
+    const message = await _getMessageById(client, messageId, chatId)
+    if (!message) { throw new Error('Message not found') }
+    if (!message.hasMedia) { throw new Error('Message media not found') }
+    const { data, mimetype, filename, filesize } = await message.downloadMedia()
+    /* #swagger.responses[200] = {
+        description: 'Binary data.'
+      }
+    */
+    res.writeHead(200, {
+      ...(mimetype && { 'Content-Type': mimetype }),
+      ...(filesize && { 'Content-Length': filesize }),
+      ...(filename && { 'Content-Disposition': `attachment; filename=${encodeURIComponent(filename)}` })
+    })
+    const readableStream = new Readable({
+      read () {
+        for (const chunk of decodeBase64(data)) {
+          this.push(chunk)
+        }
+        this.push(null)
+      }
+    })
+    readableStream.on('end', () => {
+      res.end()
+    })
+    readableStream.pipe(res)
   } catch (error) {
     sendErrorResponse(res, 500, error.message)
   }
@@ -684,6 +734,7 @@ module.exports = {
   getClassInfo,
   deleteMessage,
   downloadMedia,
+  downloadMediaAsData,
   forward,
   getInfo,
   getMentions,
