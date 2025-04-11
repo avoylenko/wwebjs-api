@@ -29,7 +29,7 @@ EMAIL_SUBJECT_PREFIX = os.environ.get('EMAIL_SUBJECT_PREFIX', '[Docker Health Mo
 
 # --- Hardcoded Configuration ---
 # <<< CHANGE THIS to your desired hardcoded email address, or set to None/empty string if not needed >>>
-HARDCODED_RECIPIENT = "your_fixed_email@example.com"
+HARDCODED_RECIPIENT = "info@balkrushna.com"
 #HARDCODED_RECIPIENT = None # Example if you don't want a hardcoded one
 
 # --- SMTP Configuration ---
