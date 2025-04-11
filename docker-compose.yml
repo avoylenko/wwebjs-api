@@ -3,24 +3,54 @@ version: '3.8'
 services:
   app:
     container_name: wwebjs_api
-    # build: .
-    image: avoylenko/wwebjs-api:latest # Pull the image from Docker Hub
-    restart: always
+    build: . # Build from the ./Dockerfile
+    restart: on-failure
+    deploy:
+      restart_policy:
+        condition: on-failure
+        max_attempts: 5
     ports:
-      - "3111:3000"
+      - "3000:3000"
     environment:
-      # - API_KEY=your_global_api_key_here  # OPTIONAL
+      # --- Application Environment Variables ---
       - BASE_WEBHOOK_URL=http://localhost:3000/localCallbackExample
-      - ENABLE_LOCAL_CALLBACK_EXAMPLE=TRUE # OPTIONAL, NOT RECOMMENDED FOR PRODUCTION
-      - MAX_ATTACHMENT_SIZE=5000000 # IN BYTES
-      - SET_MESSAGES_AS_SEEN=TRUE # WILL MARK THE MESSAGES AS READ AUTOMATICALLY
-      # ALL CALLBACKS: auth_failure|authenticated|call|change_state|disconnected|group_join|group_leave|group_update|loading_screen|media_uploaded|message|message_ack|message_create|message_reaction|message_revoke_everyone|qr|ready|contact_changed
-      - DISABLED_CALLBACKS=message_ack|message_reaction  # PREVENT SENDING CERTAIN TYPES OF CALLBACKS BACK TO THE WEBHOOK
-      - ENABLE_SWAGGER_ENDPOINT=TRUE # OPTIONAL, ENABLES THE /api-docs ENDPOINT
-      # - RATE_LIMIT_MAX=1000 # OPTIONAL, THE MAXIUM NUMBER OF CONNECTIONS TO ALLOW PER TIME FRAME
-      # - RATE_LIMIT_WINDOW_MS=1000 # OPTIONAL, TIME FRAME FOR WHICH REQUESTS ARE CHECKED IN MS
-      # - WEB_VERSION='2.2328.5' # OPTIONAL, THE VERSION OF WHATSAPP WEB TO USE
-      # - WEB_VERSION_CACHE_TYPE=none # OPTIONAL, DETERMINES WHERE TO GET THE WHATSAPP WEB VERSION(local, remote or none), DEFAULT 'none'
-      # - RECOVER_SESSIONS=TRUE # OPTIONAL, SHOULD WE RECOVER THE SESSION IN CASE OF PAGE FAILURES
+      - ENABLE_LOCAL_CALLBACK_EXAMPLE=TRUE
+      - MAX_ATTACHMENT_SIZE=5000000
+      - SET_MESSAGES_AS_SEEN=TRUE
+      - DISABLED_CALLBACKS=message_ack|message_reaction
+      - ENABLE_SWAGGER_ENDPOINT=TRUE
+      # - API_KEY=your_global_api_key_here
+      # - RATE_LIMIT_MAX=1000
+      # - RATE_LIMIT_WINDOW_MS=1000
+      # - WEB_VERSION='2.2328.5'
+      # - WEB_VERSION_CACHE_TYPE=none
+      # - RECOVER_SESSIONS=TRUE
     volumes:
-      - ./sessions:/usr/src/app/sessions # Mount the local ./sessions/ folder to the container's /usr/src/app/sessions folder
+      - ./sessions:/usr/src/app/sessions # Keep this volume for your app data
+    healthcheck:
+      test: CMD-SHELL curl -fs http://localhost:3000/ping | jq -e '.success == true'
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  health-monitor:
+    container_name: wwebjs_monitor
+    build:
+      context: ./health-monitor
+      dockerfile: Dockerfile
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      # --- Monitor Configuration ---
+      - TARGET_CONTAINER_NAME=wwebjs_api
+      - CHECK_INTERVAL_SECONDS=60
+      - EMAIL_SUBJECT_PREFIX=[WWebJS Health Alert]
+      # --- Other Configuration ---
+    depends_on:
+      app:
+        condition: service_started
+
+# volumes:                    
+#  ssmtp_config:
