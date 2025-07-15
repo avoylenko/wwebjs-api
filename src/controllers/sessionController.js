@@ -161,13 +161,23 @@ const sessionQrCode = async (req, res) => {
  * @throws {Error} If there was an error getting status of the session.
  */
 const sessionQrCodeImage = async (req, res) => {
-  const sessionId = req.params.sessionId;
+  // #swagger.summary = 'Get session QR code as image'
+  // #swagger.description = 'QR code as image of the session with the given session ID.'
+  const sessionId = req.params.sessionId
   try {
-    const session = sessions.get(sessionId);
+    const session = sessions.get(sessionId)
     if (!session) {
-      return res.status(404).json({ success: false, message: 'session_not_found' });
+      return res.json({ success: false, message: 'session_not_found' })
     }
-    if (session.qrImage) {
+    if (session.qr) {
+      const qrImage = qr.image(session.qr)
+      /* #swagger.responses[200] = {
+          description: "QR image.",
+          content: {
+            "image/png": {}
+          }
+        }
+      */
       res.writeHead(200, {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         Expires: 0,
@@ -175,12 +185,13 @@ const sessionQrCodeImage = async (req, res) => {
       })
       return qrImage.pipe(res)
     }
-    return res.status(404).json({ success: false, message: 'qr code not ready or already scanned' });
+    return res.json({ success: false, message: 'qr code not ready or already scanned' })
   } catch (error) {
-    logger.error({ sessionId, err: error }, 'Failed to get QR code image');
-    sendErrorResponse(res, 500, error.message);
+    logger.error({ sessionId, err: error }, 'Failed to get session qr code image')
+    sendErrorResponse(res, 500, error.message)
   }
-};
+}
+
 /**
  * Restarts the session with the given session ID.
  *
