@@ -1,7 +1,4 @@
-# The version property is now optional in modern Docker Compose
-# version: '3.8'
-
-name: wwebjs-api
+version: '3.8'
 
 services:
   app:
@@ -19,9 +16,9 @@ services:
     environment:
       # --- Application Environment Variables ---
       - BASE_WEBHOOK_URL=http://localhost:3000/localCallbackExample
-      - ENABLE_LOCAL_CALLBACK_EXAMPLE=TRUE
-      - MAX_ATTACHMENT_SIZE=5000000
-      - SET_MESSAGES_AS_SEEN=TRUE
+      - ENABLE_LOCAL_CALLBACK_EXAMPLE=FALSE
+      - MAX_ATTACHMENT_SIZE=50000000
+      - SET_MESSAGES_AS_SEEN=FALSE
       - DISABLED_CALLBACKS=message_ack|message_reaction
       - ENABLE_SWAGGER_ENDPOINT=TRUE
       # - API_KEY=your_global_api_key_here
@@ -59,5 +56,5 @@ services:
       app:
         condition: service_started
 
-# volumes:                    
+# volumes:
 #  ssmtp_config:
