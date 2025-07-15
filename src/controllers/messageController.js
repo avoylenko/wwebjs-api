@@ -79,17 +79,22 @@ const deleteMessage = async (req, res) => {
             type: 'boolean',
             description: 'If true and the message is sent by the current user or the user is an admin, will delete it for everyone in the chat.',
             example: true
+          },
+          clearMedia: {
+            type: 'boolean',
+            description: 'If true, any associated media will also be deleted from a device',
+            example: true
           }
         }
       }
     }
   */
   try {
-    const { messageId, chatId, everyone } = req.body
+    const { messageId, chatId, everyone, clearMedia = true } = req.body
     const client = sessions.get(req.params.sessionId)
     const message = await _getMessageById(client, messageId, chatId)
     if (!message) { throw new Error('Message not found') }
-    const result = await message.delete(everyone)
+    const result = await message.delete(everyone, clearMedia)
     res.json({ success: true, result })
   } catch (error) {
     sendErrorResponse(res, 500, error.message)

@@ -38,6 +38,7 @@ routes.use('/session', sessionRouter)
 
 sessionRouter.get('/getSessions', sessionController.getSessions)
 sessionRouter.get('/start/:sessionId', middleware.sessionNameValidation, sessionController.startSession)
+sessionRouter.get('/stop/:sessionId', middleware.sessionNameValidation, sessionController.stopSession)
 sessionRouter.get('/status/:sessionId', middleware.sessionNameValidation, sessionController.statusSession)
 sessionRouter.get('/qr/:sessionId', middleware.sessionNameValidation, sessionController.sessionQrCode)
 sessionRouter.get('/qr/:sessionId/image', middleware.sessionNameValidation, sessionController.sessionQrCodeImage)
@@ -104,6 +105,9 @@ clientRouter.post('/getContactDeviceCount/:sessionId', [middleware.sessionNameVa
 clientRouter.post('/getCountryCode/:sessionId', [middleware.sessionNameValidation, middleware.sessionValidation], clientController.getCountryCode)
 clientRouter.post('/getFormattedNumber/:sessionId', [middleware.sessionNameValidation, middleware.sessionValidation], clientController.getFormattedNumber)
 clientRouter.post('/openChatWindow/:sessionId', [middleware.sessionNameValidation, middleware.sessionValidation], clientController.openChatWindow)
+clientRouter.post('/openChatWindowAt/:sessionId', [middleware.sessionNameValidation, middleware.sessionValidation], clientController.openChatWindowAt)
+clientRouter.post('/resetState/:sessionId', [middleware.sessionNameValidation, middleware.sessionValidation], clientController.resetState)
+clientRouter.post('/setBackgroundSync/:sessionId', [middleware.sessionNameValidation, middleware.sessionValidation], clientController.setBackgroundSync)
 
 /**
  * ================

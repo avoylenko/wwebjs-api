@@ -10,12 +10,12 @@ const doc = {
   },
   servers: [
     {
-      url: '',
-      description: ''
+      url: '/',
+      description: 'default server'
     },
     {
       url: 'http://localhost:3000',
-      description: 'localhost'
+      description: 'localhost server'
     }
   ],
   securityDefinitions: {
@@ -43,6 +43,10 @@ const doc = {
     StartSessionResponse: {
       success: true,
       message: 'Session initiated successfully'
+    },
+    StopSessionResponse: {
+      success: true,
+      message: 'Session stopped successfully'
     },
     StatusSessionResponse: {
       success: true,

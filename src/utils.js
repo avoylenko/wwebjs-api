@@ -38,8 +38,8 @@ const waitForNestedObject = (rootObj, nestedPath, maxWaitTime = 10000, interval 
   })
 }
 
-const checkIfEventisEnabled = (event) => {
-  return new Promise((resolve) => { if (!disabledCallbacks.includes(event)) { resolve() } })
+const isEventEnabled = (event) => {
+  return !disabledCallbacks.includes(event)
 }
 
 const sendMessageSeenStatus = async (message) => {
@@ -59,11 +59,16 @@ const decodeBase64 = function * (base64String) {
   }
 }
 
+const sleep = function (ms) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
 module.exports = {
   triggerWebhook,
   sendErrorResponse,
   waitForNestedObject,
-  checkIfEventisEnabled,
+  isEventEnabled,
   sendMessageSeenStatus,
-  decodeBase64
+  decodeBase64,
+  sleep
 }

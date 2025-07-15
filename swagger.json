@@ -7,12 +7,12 @@
   },
   "servers": [
     {
-      "url": "",
-      "description": ""
+      "url": "/",
+      "description": "default server"
     },
     {
       "url": "http://localhost:3000",
-      "description": "localhost"
+      "description": "localhost server"
     }
   ],
   "tags": [
@@ -178,6 +178,74 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/StartSessionResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          }
+        ]
+      }
+    },
+    "/session/stop/{sessionId}": {
+      "get": {
+        "tags": [
+          "Session"
+        ],
+        "summary": "Stop session",
+        "description": "Stops a session for the given session ID.",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Unique identifier for the session (alphanumeric and - allowed)",
+            "example": "f8377d8d-a589-4242-9ba6-9486a04ef80c"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Status of the stopped session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StopSessionResponse"
                 }
               }
             }
@@ -1163,7 +1231,7 @@
                     "example": []
                   },
                   "options": {
-                    "type": "array",
+                    "type": "object",
                     "description": "An object that handles options for group creation",
                     "example": {}
                   }
@@ -1185,7 +1253,7 @@
                     "example": []
                   },
                   "options": {
-                    "type": "array",
+                    "type": "object",
                     "description": "An object that handles options for group creation",
                     "example": {}
                   }
@@ -3664,10 +3732,10 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "chatId": {
-                    "type": "string",
-                    "description": "ID of the chat",
-                    "example": "6281288888888@c.us"
+                  "flag": {
+                    "type": "boolean",
+                    "description": "flag true/false",
+                    "example": true
                   }
                 }
               }
@@ -3676,10 +3744,10 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "chatId": {
-                    "type": "string",
-                    "description": "ID of the chat",
-                    "example": "6281288888888@c.us"
+                  "flag": {
+                    "type": "boolean",
+                    "description": "flag true/false",
+                    "example": true
                   }
                 }
               }
@@ -5130,6 +5198,277 @@
         }
       }
     },
+    "/client/openChatWindowAt/{sessionId}": {
+      "post": {
+        "tags": [
+          "Client"
+        ],
+        "summary": "Open the chat window to the position of the message",
+        "description": "",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Unique identifier for the session (alphanumeric and - allowed)",
+            "example": "f8377d8d-a589-4242-9ba6-9486a04ef80c"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "403": {
+            "description": "Forbidden.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "messageId": {
+                    "type": "string",
+                    "description": "ID of the message to scroll to (serialized)",
+                    "example": "false_31235678901@c.us_3A40CB10BC3680B1EE"
+                  }
+                }
+              }
+            },
+            "application/xml": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "messageId": {
+                    "type": "string",
+                    "description": "ID of the message to scroll to (serialized)",
+                    "example": "false_31235678901@c.us_3A40CB10BC3680B1EE"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/client/resetState/{sessionId}": {
+      "post": {
+        "tags": [
+          "Client"
+        ],
+        "summary": "Force reset of connection state for the client",
+        "description": "",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Unique identifier for the session (alphanumeric and - allowed)",
+            "example": "f8377d8d-a589-4242-9ba6-9486a04ef80c"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "403": {
+            "description": "Forbidden.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          }
+        ]
+      }
+    },
+    "/client/setBackgroundSync/{sessionId}": {
+      "post": {
+        "tags": [
+          "Client"
+        ],
+        "summary": "Change the background synchronization setting",
+        "description": "NOTE: This action will take effect after you restart the client",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Unique identifier for the session (alphanumeric and - allowed)",
+            "example": "f8377d8d-a589-4242-9ba6-9486a04ef80c"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "403": {
+            "description": "Forbidden.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "flag": {
+                    "type": "boolean",
+                    "description": "flag true/false",
+                    "example": true
+                  }
+                }
+              }
+            },
+            "application/xml": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "flag": {
+                    "type": "boolean",
+                    "description": "flag true/false",
+                    "example": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/chat/getClassInfo/{sessionId}": {
       "post": {
         "tags": [
@@ -6567,8 +6906,8 @@
         "tags": [
           "Group Chat"
         ],
-        "summary": "Add the participant(s)",
-        "description": "Add a list of participants by id to the group",
+        "summary": "Add the participants",
+        "description": "Add a list of participants by ID to the group",
         "parameters": [
           {
             "name": "sessionId",
@@ -6643,10 +6982,12 @@
                     "description": "Unique WhatsApp id for the given chat group",
                     "example": "XXXXXXXXXX@g.us"
                   },
-                  "contactIds": {
-                    "type": "string",
-                    "description": "Unique WhatsApp identifier for the contact",
-                    "example": "6281288888887@c.us"
+                  "participantIds": {
+                    "type": "array",
+                    "description": "Unique WhatsApp identifiers for the participants",
+                    "example": [
+                      "6281288888887@c.us"
+                    ]
                   },
                   "options": {
                     "type": "object",
@@ -6671,10 +7012,12 @@
                     "description": "Unique WhatsApp id for the given chat group",
                     "example": "XXXXXXXXXX@g.us"
                   },
-                  "contactIds": {
-                    "type": "string",
-                    "description": "Unique WhatsApp identifier for the contact",
-                    "example": "6281288888887@c.us"
+                  "participantIds": {
+                    "type": "array",
+                    "description": "Unique WhatsApp identifiers for the participants",
+                    "example": [
+                      "6281288888887@c.us"
+                    ]
                   },
                   "options": {
                     "type": "object",
@@ -6699,8 +7042,8 @@
         "tags": [
           "Group Chat"
         ],
-        "summary": "Demote the participant(s)",
-        "description": "Demote participants by ids to regular users",
+        "summary": "Demote the participants",
+        "description": "Demote participants by ID to regular users",
         "parameters": [
           {
             "name": "sessionId",
@@ -6775,10 +7118,12 @@
                     "description": "Unique WhatsApp id for the given chat group",
                     "example": "XXXXXXXXXX@g.us"
                   },
-                  "contactIds": {
-                    "type": "string",
-                    "description": "Unique WhatsApp identifier for the contact",
-                    "example": "6281288888887@c.us"
+                  "participantIds": {
+                    "type": "array",
+                    "description": "Unique WhatsApp identifiers for the participants",
+                    "example": [
+                      "6281288888887@c.us"
+                    ]
                   }
                 }
               }
@@ -6792,10 +7137,12 @@
                     "description": "Unique WhatsApp id for the given chat group",
                     "example": "XXXXXXXXXX@g.us"
                   },
-                  "contactIds": {
-                    "type": "string",
-                    "description": "Unique WhatsApp identifier for the contact",
-                    "example": "6281288888887@c.us"
+                  "participantIds": {
+                    "type": "array",
+                    "description": "Unique WhatsApp identifiers for the participants",
+                    "example": [
+                      "6281288888887@c.us"
+                    ]
                   }
                 }
               }
@@ -7009,8 +7356,8 @@
         "tags": [
           "Group Chat"
         ],
-        "summary": "Promote the participant(s)",
-        "description": "Promote participants by IDs to admins",
+        "summary": "Promote the participants",
+        "description": "Promote participants by ID to admins",
         "parameters": [
           {
             "name": "sessionId",
@@ -7085,10 +7432,12 @@
                     "description": "Unique WhatsApp id for the given chat group",
                     "example": "XXXXXXXXXX@g.us"
                   },
-                  "contactIds": {
-                    "type": "string",
-                    "description": "Unique WhatsApp identifier for the contact",
-                    "example": "6281288888887@c.us"
+                  "participantIds": {
+                    "type": "array",
+                    "description": "Unique WhatsApp identifiers for the participants",
+                    "example": [
+                      "6281288888887@c.us"
+                    ]
                   }
                 }
               }
@@ -7102,10 +7451,12 @@
                     "description": "Unique WhatsApp id for the given chat group",
                     "example": "XXXXXXXXXX@g.us"
                   },
-                  "contactIds": {
-                    "type": "string",
-                    "description": "Unique WhatsApp identifier for the contact",
-                    "example": "6281288888887@c.us"
+                  "participantIds": {
+                    "type": "array",
+                    "description": "Unique WhatsApp identifiers for the participants",
+                    "example": [
+                      "6281288888887@c.us"
+                    ]
                   }
                 }
               }
@@ -7119,7 +7470,7 @@
         "tags": [
           "Group Chat"
         ],
-        "summary": "Remove the participant(s)",
+        "summary": "Remove the participants",
         "description": "Remove a list of participants by ID to the group",
         "parameters": [
           {
@@ -7195,10 +7546,12 @@
                     "description": "Unique WhatsApp id for the given chat group",
                     "example": "XXXXXXXXXX@g.us"
                   },
-                  "contactIds": {
-                    "type": "string",
-                    "description": "Unique WhatsApp identifier for the contact",
-                    "example": "6281288888887@c.us"
+                  "participantIds": {
+                    "type": "array",
+                    "description": "Unique WhatsApp identifiers for the participants",
+                    "example": [
+                      "6281288888887@c.us"
+                    ]
                   }
                 }
               }
@@ -7212,10 +7565,12 @@
                     "description": "Unique WhatsApp id for the given chat group",
                     "example": "XXXXXXXXXX@g.us"
                   },
-                  "contactIds": {
-                    "type": "string",
-                    "description": "Unique WhatsApp identifier for the contact",
-                    "example": "6281288888887@c.us"
+                  "participantIds": {
+                    "type": "array",
+                    "description": "Unique WhatsApp identifiers for the participants",
+                    "example": [
+                      "6281288888887@c.us"
+                    ]
                   }
                 }
               }
@@ -8524,6 +8879,11 @@
                     "type": "boolean",
                     "description": "If true and the message is sent by the current user or the user is an admin, will delete it for everyone in the chat.",
                     "example": true
+                  },
+                  "clearMedia": {
+                    "type": "boolean",
+                    "description": "If true, any associated media will also be deleted from a device",
+                    "example": true
                   }
                 }
               }
@@ -8545,6 +8905,11 @@
                   "everyone": {
                     "type": "boolean",
                     "description": "If true and the message is sent by the current user or the user is an admin, will delete it for everyone in the chat.",
+                    "example": true
+                  },
+                  "clearMedia": {
+                    "type": "boolean",
+                    "description": "If true, any associated media will also be deleted from a device",
                     "example": true
                   }
                 }
@@ -11272,6 +11637,22 @@
         },
         "xml": {
           "name": "StartSessionResponse"
+        }
+      },
+      "StopSessionResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Session stopped successfully"
+          }
+        },
+        "xml": {
+          "name": "StopSessionResponse"
         }
       },
       "StatusSessionResponse": {

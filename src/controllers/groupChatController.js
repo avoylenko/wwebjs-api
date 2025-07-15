@@ -33,17 +33,17 @@ const getClassInfo = async (req, res) => {
  * Adds participants to a group chat.
  * @async
  * @function
- * @param {Object} req - The request object containing the chatId and contactIds in the body.
+ * @param {Object} req - The request object containing the chatId and participantIds in the body.
  * @param {string} req.body.chatId - The ID of the group chat.
- * @param {Array<string>} req.body.contactIds - An array of contact IDs to be added to the group.
+ * @param {Array<string>} req.body.participantIds - An array of participant IDs to be added to the group.
  * @param {Object} res - The response object.
  * @returns {Object} Returns a JSON object containing a success flag and the updated participants list.
  * @throws {Error} Throws an error if the chat is not a group chat.
 */
 const addParticipants = async (req, res) => {
   /*
-    #swagger.summary = 'Add the participant(s)'
-    #swagger.description = 'Add a list of participants by id to the group'
+    #swagger.summary = 'Add the participants'
+    #swagger.description = 'Add a list of participants by ID to the group'
     #swagger.requestBody = {
       required: true,
       schema: {
@@ -54,10 +54,10 @@ const addParticipants = async (req, res) => {
             description: 'Unique WhatsApp id for the given chat group',
             example: 'XXXXXXXXXX@g.us'
           },
-          contactIds: {
-            type: 'string',
-            description: 'Unique WhatsApp identifier for the contact',
-            example: '6281288888887@c.us'
+          participantIds: {
+            type: 'array',
+            description: 'Unique WhatsApp identifiers for the participants',
+            example: ['6281288888887@c.us']
           },
           options: {
             type: 'object',
@@ -69,11 +69,14 @@ const addParticipants = async (req, res) => {
     }
   */
   try {
-    const { chatId, contactIds, options = {} } = req.body
+    const { chatId, contactIds, participantIds, options = {} } = req.body
     const client = sessions.get(req.params.sessionId)
     const chat = await client.getChatById(chatId)
     if (!chat.isGroup) { throw new Error('The chat is not a group') }
-    const result = Object.keys(options).length ? await chat.addParticipants(contactIds, options) : await chat.addParticipants(contactIds)
+    // support old property name
+    const addParticipants = participantIds || contactIds
+    const participantIdsArray = Array.isArray(addParticipants) ? addParticipants : [addParticipants]
+    const result = Object.keys(options).length ? await chat.addParticipants(participantIdsArray, options) : await chat.addParticipants(participantIdsArray)
     res.json({ success: true, result })
   } catch (error) {
     sendErrorResponse(res, 500, error.message)
@@ -92,7 +95,7 @@ const addParticipants = async (req, res) => {
  */
 const removeParticipants = async (req, res) => {
   /*
-    #swagger.summary = 'Remove the participant(s)'
+    #swagger.summary = 'Remove the participants'
     #swagger.description = 'Remove a list of participants by ID to the group'
     #swagger.requestBody = {
       required: true,
@@ -104,21 +107,24 @@ const removeParticipants = async (req, res) => {
             description: 'Unique WhatsApp id for the given chat group',
             example: 'XXXXXXXXXX@g.us'
           },
-          contactIds: {
-            type: 'string',
-            description: 'Unique WhatsApp identifier for the contact',
-            example: '6281288888887@c.us'
+          participantIds: {
+            type: 'array',
+            description: 'Unique WhatsApp identifiers for the participants',
+            example: ['6281288888887@c.us']
           }
         }
       }
     }
   */
   try {
-    const { chatId, contactIds } = req.body
+    const { chatId, contactIds, participantIds } = req.body
     const client = sessions.get(req.params.sessionId)
     const chat = await client.getChatById(chatId)
     if (!chat.isGroup) { throw new Error('The chat is not a group') }
-    const result = await chat.removeParticipants(contactIds)
+    // support old property name
+    const addParticipants = participantIds || contactIds
+    const participantIdsArray = Array.isArray(addParticipants) ? addParticipants : [addParticipants]
+    const result = await chat.removeParticipants(participantIdsArray)
     res.json({ success: true, result })
   } catch (error) {
     sendErrorResponse(res, 500, error.message)
@@ -137,8 +143,8 @@ const removeParticipants = async (req, res) => {
  */
 const promoteParticipants = async (req, res) => {
   /*
-    #swagger.summary = 'Promote the participant(s)'
-    #swagger.description = 'Promote participants by IDs to admins'
+    #swagger.summary = 'Promote the participants'
+    #swagger.description = 'Promote participants by ID to admins'
     #swagger.requestBody = {
       required: true,
       schema: {
@@ -149,21 +155,24 @@ const promoteParticipants = async (req, res) => {
             description: 'Unique WhatsApp id for the given chat group',
             example: 'XXXXXXXXXX@g.us'
           },
-          contactIds: {
-            type: 'string',
-            description: 'Unique WhatsApp identifier for the contact',
-            example: '6281288888887@c.us'
+          participantIds: {
+            type: 'array',
+            description: 'Unique WhatsApp identifiers for the participants',
+            example: ['6281288888887@c.us']
           }
         }
       }
     }
   */
   try {
-    const { chatId, contactIds } = req.body
+    const { chatId, contactIds, participantIds } = req.body
     const client = sessions.get(req.params.sessionId)
     const chat = await client.getChatById(chatId)
     if (!chat.isGroup) { throw new Error('The chat is not a group') }
-    const result = await chat.promoteParticipants(contactIds)
+    // support old property name
+    const addParticipants = participantIds || contactIds
+    const participantIdsArray = Array.isArray(addParticipants) ? addParticipants : [addParticipants]
+    const result = await chat.promoteParticipants(participantIdsArray)
     res.json({ success: true, result })
   } catch (error) {
     sendErrorResponse(res, 500, error.message)
@@ -182,8 +191,8 @@ const promoteParticipants = async (req, res) => {
  */
 const demoteParticipants = async (req, res) => {
   /*
-    #swagger.summary = 'Demote the participant(s)'
-    #swagger.description = 'Demote participants by ids to regular users'
+    #swagger.summary = 'Demote the participants'
+    #swagger.description = 'Demote participants by ID to regular users'
     #swagger.requestBody = {
       required: true,
       schema: {
@@ -194,21 +203,24 @@ const demoteParticipants = async (req, res) => {
             description: 'Unique WhatsApp id for the given chat group',
             example: 'XXXXXXXXXX@g.us'
           },
-          contactIds: {
-            type: 'string',
-            description: 'Unique WhatsApp identifier for the contact',
-            example: '6281288888887@c.us'
+          participantIds: {
+            type: 'array',
+            description: 'Unique WhatsApp identifiers for the participants',
+            example: ['6281288888887@c.us']
           }
         }
       }
     }
   */
   try {
-    const { chatId, contactIds } = req.body
+    const { chatId, contactIds, participantIds } = req.body
     const client = sessions.get(req.params.sessionId)
     const chat = await client.getChatById(chatId)
     if (!chat.isGroup) { throw new Error('The chat is not a group') }
-    const result = await chat.demoteParticipants(contactIds)
+    // support old property name
+    const addParticipants = participantIds || contactIds
+    const participantIdsArray = Array.isArray(addParticipants) ? addParticipants : [addParticipants]
+    const result = await chat.demoteParticipants(participantIdsArray)
     res.json({ success: true, result })
   } catch (error) {
     sendErrorResponse(res, 500, error.message)

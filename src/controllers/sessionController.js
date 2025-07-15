@@ -1,4 +1,5 @@
-const { setupSession, deleteSession, reloadSession, validateSession, flushSessions, sessions } = require('../sessions')
+const qr = require('qr-image')
+const { setupSession, deleteSession, reloadSession, validateSession, flushSessions, destroySession, sessions } = require('../sessions')
 const { sendErrorResponse, waitForNestedObject } = require('../utils')
 const { logger } = require('../logger')
 
@@ -46,6 +47,39 @@ const startSession = async (req, res) => {
     res.json({ success: true, message: setupSessionReturn.message })
   } catch (error) {
     logger.error({ sessionId, err: error }, 'Failed to start session')
+    sendErrorResponse(res, 500, error.message)
+  }
+}
+
+/**
+ * Stops a session for the given session ID.
+ *
+ * @function
+ * @async
+ * @param {Object} req - The HTTP request object.
+ * @param {Object} res - The HTTP response object.
+ * @param {string} req.params.sessionId - The session ID to stop.
+ * @returns {Promise<void>}
+ * @throws {Error} If there was an error stopping the session.
+ */
+const stopSession = async (req, res) => {
+  // #swagger.summary = 'Stop session'
+  // #swagger.description = 'Stops a session for the given session ID.'
+  const sessionId = req.params.sessionId
+  try {
+    await destroySession(sessionId)
+    /* #swagger.responses[200] = {
+      description: "Status of the stopped session.",
+      content: {
+        "application/json": {
+          schema: { "$ref": "#/definitions/StopSessionResponse" }
+        }
+      }
+    }
+    */
+    res.json({ success: true, message: 'Session stopped successfully' })
+  } catch (error) {
+    logger.error({ sessionId, err: error }, 'Failed to stop session')
     sendErrorResponse(res, 500, error.message)
   }
 }
@@ -104,6 +138,8 @@ const sessionQrCode = async (req, res) => {
       return res.json({ success: false, message: 'session_not_found' })
     }
     if (session.qr) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+      res.setHeader('Expires', 0)
       return res.json({ success: true, qr: session.qr })
     }
     return res.json({ success: false, message: 'qr code not ready or already scanned' })
@@ -133,10 +169,11 @@ const sessionQrCodeImage = async (req, res) => {
     }
     if (session.qrImage) {
       res.writeHead(200, {
-        'Content-Type': 'image/png',
-        'Content-Length': session.qrImage.length
-      });
-      return res.end(session.qrImage); // Send cached image
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        Expires: 0,
+        'Content-Type': 'image/png'
+      })
+      return qrImage.pipe(res)
     }
     return res.status(404).json({ success: false, message: 'qr code not ready or already scanned' });
   } catch (error) {
@@ -402,6 +439,7 @@ const getPageScreenshot = async (req, res) => {
 
 module.exports = {
   startSession,
+  stopSession,
   statusSession,
   sessionQrCode,
   sessionQrCodeImage,

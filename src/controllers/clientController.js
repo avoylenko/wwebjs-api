@@ -250,7 +250,7 @@ const createGroup = async (req, res) => {
             example: []
           },
           options: {
-            type: 'array',
+            type: 'object',
             description: 'An object that handles options for group creation',
             example: {}
           },
@@ -1708,6 +1708,110 @@ const openChatWindow = async (req, res) => {
   }
 }
 
+/**
+ * Open or scroll the chat window to the position of the message.
+ *
+ * @async
+ * @function
+ * @param {Object} req - The HTTP request object containing the chatId and sessionId.
+ * @param {string} req.body.chatId - The unique identifier of the chat to unmute.
+ * @param {string} req.params.sessionId - The unique identifier of the session associated with the client to use.
+ * @param {Object} res - The HTTP response object.
+ * @returns {Promise<Object>} - A Promise that resolves with a JSON object containing a success flag and the result of the operation.
+ * @throws {Error} - If an error occurs during the operation, it is thrown and handled by the catch block.
+ */
+const openChatWindowAt = async (req, res) => {
+  /*
+    #swagger.summary = 'Open the chat window to the position of the message'
+    #swagger.requestBody = {
+      required: true,
+      schema: {
+        type: 'object',
+        properties: {
+          messageId: {
+            type: 'string',
+            description: 'ID of the message to scroll to (serialized)',
+            example: 'false_31235678901@c.us_3A40CB10BC3680B1EE'
+          },
+        }
+      },
+    }
+  */
+  try {
+    const { messageId } = req.body
+    const client = sessions.get(req.params.sessionId)
+    await client.interface.openChatWindowAt(messageId)
+    res.json({ success: true })
+  } catch (error) {
+    sendErrorResponse(res, 500, error.message)
+  }
+}
+
+/**
+ * Force reset of connection state for the client.
+ *
+ * @async
+ * @function
+ * @param {Object} req - The HTTP request object containing the chatId and sessionId.
+ * @param {string} req.body.chatId - The unique identifier of the chat to unmute.
+ * @param {string} req.params.sessionId - The unique identifier of the session associated with the client to use.
+ * @param {Object} res - The HTTP response object.
+ * @returns {Promise<Object>} - A Promise that resolves with a JSON object containing a success flag and the result of the operation.
+ * @throws {Error} - If an error occurs during the operation, it is thrown and handled by the catch block.
+ */
+const resetState = async (req, res) => {
+  /*
+    #swagger.summary = 'Force reset of connection state for the client'
+  */
+  try {
+    const client = sessions.get(req.params.sessionId)
+    await client.resetState()
+    res.json({ success: true })
+  } catch (error) {
+    sendErrorResponse(res, 500, error.message)
+  }
+}
+
+/**
+ * Change the background synchronization setting.
+ *
+ * @async
+ * @function
+ * @param {Object} req - The HTTP request object containing the chatId and sessionId.
+ * @param {string} req.body.chatId - The unique identifier of the chat to unmute.
+ * @param {string} req.params.sessionId - The unique identifier of the session associated with the client to use.
+ * @param {Object} res - The HTTP response object.
+ * @returns {Promise<Object>} - A Promise that resolves with a JSON object containing a success flag and the result of the operation.
+ * @throws {Error} - If an error occurs during the operation, it is thrown and handled by the catch block.
+ */
+const setBackgroundSync = async (req, res) => {
+  /*
+    #swagger.summary = 'Change the background synchronization setting'
+    #swagger.description = 'NOTE: This action will take effect after you restart the client'
+    #swagger.requestBody = {
+      required: true,
+      schema: {
+        type: 'object',
+        properties: {
+          flag: {
+            type: 'boolean',
+            description: 'flag true/false',
+            example: true
+          },
+        }
+      },
+    }
+  */
+  try {
+    const { flag = true } = req.body
+    const client = sessions.get(req.params.sessionId)
+    await client.setBackgroundSync(flag)
+    res.json({ success: true })
+  } catch (error) {
+    sendErrorResponse(res, 500, error.message)
+  }
+}
+
 module.exports = {
   getClassInfo,
   acceptInvite,
@@ -1753,5 +1857,8 @@ module.exports = {
   getContactDeviceCount,
   getCountryCode,
   getFormattedNumber,
-  openChatWindow
+  openChatWindow,
+  openChatWindowAt,
+  resetState,
+  setBackgroundSync
 }

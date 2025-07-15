@@ -1,4 +1,7 @@
-version: '3.8'
+# The version property is now optional in modern Docker Compose
+# version: '3.8'
+
+name: wwebjs-api
 
 services:
   app:
