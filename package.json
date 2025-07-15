@@ -18,7 +18,8 @@
     "qrcode-terminal": "^0.12.0",
     "swagger-ui-express": "^5.0.1",
     "whatsapp-web.js": "^1.31.0",
-    "ws": "^8.18.2"
+    "ws": "^8.18.2",
+    "cors": "^2.8.5"
   },
   "devDependencies": {
     "eslint": "^8.38.0",
