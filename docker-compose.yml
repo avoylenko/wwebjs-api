@@ -30,7 +30,7 @@ services:
     volumes:
       - ./sessions:/usr/src/app/sessions # Keep this volume for your app data
     healthcheck:
-      test: CMD-SHELL curl -fs http://localhost:3000/ping | jq -e '.success == true'
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/ping | jq -e '.success == true'"]
       interval: 30s
       timeout: 10s
       retries: 3
