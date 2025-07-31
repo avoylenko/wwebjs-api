@@ -81,6 +81,11 @@ const sendMessage = async (req, res) => {
         break
       case 'MessageMediaFromURL': {
         const messageMediaFromURL = await MessageMedia.fromUrl(content, { unsafeMime: true, ...mediaFromURLOptions })
+
+        if (options?.filename) {
+          messageMediaFromURL.filename = options.filename;
+        }
+
         messageOut = await client.sendMessage(chatId, messageMediaFromURL, options)
         break
       }
