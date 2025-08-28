@@ -79,7 +79,7 @@ const doc = {
     },
     GetSessionsResponse: {
       success: true,
-      result: []
+      result: ['session1', 'session2']
     }
   }
 }
