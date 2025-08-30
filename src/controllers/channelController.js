@@ -106,6 +106,7 @@ const sendMessage = async (req, res) => {
 
   try {
     const { chatId, content, contentType, options, mediaFromURLOptions = {} } = req.body
+    const sendOptions = { waitUntilMsgSent: true, ...options }
     const client = sessions.get(req.params.sessionId)
     const chat = await client.getChatById(chatId)
     if (!chat) {
@@ -119,16 +120,16 @@ const sendMessage = async (req, res) => {
     let messageOut
     switch (contentType) {
       case 'string':
-        messageOut = await chat.sendMessage(content, options)
+        messageOut = await chat.sendMessage(content, sendOptions)
         break
       case 'MessageMediaFromURL': {
         const messageMediaFromURL = await MessageMedia.fromUrl(content, { unsafeMime: true, ...mediaFromURLOptions })
-        messageOut = await chat.sendMessage(messageMediaFromURL, options)
+        messageOut = await chat.sendMessage(messageMediaFromURL, sendOptions)
         break
       }
       case 'MessageMedia': {
         const messageMedia = new MessageMedia(content.mimetype, content.data, content.filename, content.filesize)
-        messageOut = await chat.sendMessage(messageMedia, options)
+        messageOut = await chat.sendMessage(messageMedia, sendOptions)
         break
       }
       default:

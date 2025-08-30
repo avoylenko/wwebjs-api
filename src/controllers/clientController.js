@@ -64,47 +64,46 @@ const sendMessage = async (req, res) => {
   */
 
   try {
-    const { chatId, content, contentType, options, mediaFromURLOptions = {} } = req.body
+    const { chatId, content, contentType, options = {}, mediaFromURLOptions = {} } = req.body
     const client = sessions.get(req.params.sessionId)
+    const sendOptions = { waitUntilMsgSent: true, ...options }
 
     let messageOut
     switch (contentType) {
       case 'string':
-        if (options?.media) {
-          const { mimetype, data, filename = null, filesize = null } = options.media
+        if (sendOptions?.media) {
+          const { mimetype, data, filename = null, filesize = null } = sendOptions.media
           if (!mimetype || !data) {
             return sendErrorResponse(res, 400, 'invalid media options')
           }
-          options.media = new MessageMedia(mimetype, data, filename, filesize)
+          sendOptions.media = new MessageMedia(mimetype, data, filename, filesize)
         }
-        messageOut = await client.sendMessage(chatId, content, options)
+        messageOut = await client.sendMessage(chatId, content, sendOptions)
         break
       case 'MessageMediaFromURL': {
         const messageMediaFromURL = await MessageMedia.fromUrl(content, { unsafeMime: true, ...mediaFromURLOptions })
-        messageOut = await client.sendMessage(chatId, messageMediaFromURL, options)
+        messageOut = await client.sendMessage(chatId, messageMediaFromURL, sendOptions)
         break
       }
       case 'MessageMedia': {
         const messageMedia = new MessageMedia(content.mimetype, content.data, content.filename, content.filesize)
-        messageOut = await client.sendMessage(chatId, messageMedia, options)
+        messageOut = await client.sendMessage(chatId, messageMedia, sendOptions)
         break
       }
       case 'Location': {
         const location = new Location(content.latitude, content.longitude, content.description)
-        messageOut = await client.sendMessage(chatId, location, options)
+        messageOut = await client.sendMessage(chatId, location, sendOptions)
         break
       }
       case 'Contact': {
         const contactId = content.contactId.endsWith('@c.us') ? content.contactId : `${content.contactId}@c.us`
         const contact = await client.getContactById(contactId)
-        messageOut = await client.sendMessage(chatId, contact, options)
+        messageOut = await client.sendMessage(chatId, contact, sendOptions)
         break
       }
       case 'Poll': {
         const poll = new Poll(content.pollName, content.pollOptions, content.options)
-        messageOut = await client.sendMessage(chatId, poll, options)
-        // fix for poll events not being triggered (open the chat that you sent the poll)
-        await client.interface.openChatWindow(chatId)
+        messageOut = await client.sendMessage(chatId, poll, sendOptions)
         break
       }
       default:
