@@ -178,6 +178,35 @@ const setupSession = async (sessionId) => {
 
     try {
       await client.initialize()
+      // hotfix for https://github.com/pedroslopez/whatsapp-web.js/pull/3703
+      client.once('ready', () => {
+        client.pupPage.evaluate(() => {
+          window.Store.FindOrCreateChat = window.require('WAWebFindChatAction')
+          window.WWebJS.getChat = async (chatId, { getAsModel = true } = {}) => {
+            const isChannel = /@\w*newsletter\b/.test(chatId)
+            const chatWid = window.Store.WidFactory.createWid(chatId)
+            let chat
+
+            if (isChannel) {
+              try {
+                chat = window.Store.NewsletterCollection.get(chatId)
+                if (!chat) {
+                  await window.Store.ChannelUtils.loadNewsletterPreviewChat(chatId)
+                  chat = await window.Store.NewsletterCollection.find(chatWid)
+                }
+              } catch (err) {
+                chat = null
+              }
+            } else {
+              chat = window.Store.Chat.get(chatWid) || (await window.Store.FindOrCreateChat.findOrCreateLatestChat(chatWid))?.chat
+            }
+
+            return getAsModel && chat
+              ? await window.WWebJS.getChatModel(chat, { isChannel })
+              : chat
+          }
+        })
+      })
     } catch (error) {
       logger.error({ sessionId, err: error }, 'Initialize error')
       throw error
