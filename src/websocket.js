@@ -1,5 +1,5 @@
 const { WebSocketServer } = require('ws')
-const { enableWebSocket } = require('./config')
+const { enableWebSocket, basePath } = require('./config')
 const { logger } = require('./logger')
 const wssMap = new Map()
 
@@ -52,10 +52,15 @@ const triggerWebSocket = (sessionId, dataType, data) => {
 }
 
 const handleUpgrade = (request, socket, head) => {
-  const baseUrl = 'ws://' + request.headers.host + '/'
+  const host = request.headers['x-forwarded-host'] || request.headers.host
+  const baseUrl = 'ws://' + host + '/'
   const { pathname } = new URL(request.url, baseUrl)
-  if (pathname.startsWith('/ws/')) {
-    const sessionId = pathname.split('/')[2]
+  
+  // Handle base path for WebSocket connections
+  const wsPath = basePath ? `${basePath}/ws/` : '/ws/'
+  if (pathname.startsWith(wsPath)) {
+    const pathParts = pathname.split('/')
+    const sessionId = basePath ? pathParts[3] : pathParts[2]
     const server = wssMap.get(sessionId)
     if (server) {
       server.handleUpgrade(request, socket, head, (ws) => {
