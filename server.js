@@ -1,10 +1,11 @@
+// Load environment variables first
+require('dotenv').config({ path: process.env.ENV_PATH || '.env' })
+
 const app = require('./src/app')
 const { baseWebhookURL, enableWebHook, enableWebSocket, autoStartSessions } = require('./src/config')
 const { logger } = require('./src/logger')
 const { handleUpgrade } = require('./src/websocket')
 const { restoreSessions } = require('./src/sessions')
-
-require('dotenv').config()
 
 // Start the server
 const port = process.env.PORT || 3000

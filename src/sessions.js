@@ -3,7 +3,7 @@ const fs = require('fs')
 const path = require('path')
 const sessions = new Map()
 const { baseWebhookURL, sessionFolderPath, maxAttachmentSize, setMessagesAsSeen, webVersion, webVersionCacheType, recoverSessions, chromeBin, headless, releaseBrowserLock } = require('./config')
-const { triggerWebhook, waitForNestedObject, isEventEnabled, sendMessageSeenStatus, sleep } = require('./utils')
+const { triggerWebhook, waitForNestedObject, isEventEnabled, sendMessageSeenStatus, sleep, patchWWebLibrary } = require('./utils')
 const { logger } = require('./logger')
 const { initWebSocketServer, terminateWebSocketServer, triggerWebSocket } = require('./websocket')
 
@@ -177,43 +177,18 @@ const setupSession = async (sessionId) => {
     }
 
     try {
-      await client.initialize()
-      // hotfix for https://github.com/pedroslopez/whatsapp-web.js/pull/3703
       client.once('ready', () => {
-        client.pupPage.evaluate(() => {
-          window.Store.FindOrCreateChat = window.require('WAWebFindChatAction')
-          window.WWebJS.getChat = async (chatId, { getAsModel = true } = {}) => {
-            const isChannel = /@\w*newsletter\b/.test(chatId)
-            const chatWid = window.Store.WidFactory.createWid(chatId)
-            let chat
-
-            if (isChannel) {
-              try {
-                chat = window.Store.NewsletterCollection.get(chatId)
-                if (!chat) {
-                  await window.Store.ChannelUtils.loadNewsletterPreviewChat(chatId)
-                  chat = await window.Store.NewsletterCollection.find(chatWid)
-                }
-              } catch (err) {
-                chat = null
-              }
-            } else {
-              chat = window.Store.Chat.get(chatWid) || (await window.Store.FindOrCreateChat.findOrCreateLatestChat(chatWid))?.chat
-            }
-
-            return getAsModel && chat
-              ? await window.WWebJS.getChatModel(chat, { isChannel })
-              : chat
-          }
+        patchWWebLibrary(client).catch((err) => {
+          logger.error({ sessionId, err }, 'Failed to patch WWebJS library')
         })
       })
+      initWebSocketServer(sessionId)
+      initializeEvents(client, sessionId)
+      await client.initialize()
     } catch (error) {
       logger.error({ sessionId, err: error }, 'Initialize error')
       throw error
     }
-
-    initWebSocketServer(sessionId)
-    initializeEvents(client, sessionId)
 
     // Save the session to the Map
     sessions.set(sessionId, client)
@@ -254,13 +229,13 @@ const initializeEvents = (client, sessionId) => {
     })
   }
 
-  if (isEventEnabled('authenticated')) {
+  client.on('authenticated', () => {
     client.qr = null
-    client.on('authenticated', () => {
+    if (isEventEnabled('authenticated')) {
       triggerWebhook(sessionWebhook, sessionId, 'authenticated')
       triggerWebSocket(sessionId, 'authenticated')
-    })
-  }
+    }
+  })
 
   if (isEventEnabled('call')) {
     client.on('call', (call) => {
@@ -405,18 +380,8 @@ const initializeEvents = (client, sessionId) => {
   }
 
   client.on('qr', (qr) => {
-    // by default QR code is being updated every 20 seconds
-    if (client.qrClearTimeout) {
-      clearTimeout(client.qrClearTimeout)
-    }
     // inject qr code into session
     client.qr = qr
-    client.qrClearTimeout = setTimeout(() => {
-      if (client.qr) {
-        logger.warn({ sessionId }, 'Removing expired QR code')
-        client.qr = null
-      }
-    }, 30000)
     if (isEventEnabled('qr')) {
       triggerWebhook(sessionWebhook, sessionId, 'qr', { qr })
       triggerWebSocket(sessionId, 'qr', { qr })

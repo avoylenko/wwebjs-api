@@ -361,6 +361,56 @@ const getChats = async (req, res) => {
 }
 
 /**
+ * Retrieve all chats for the given session ID with optional search parameters.
+ *
+ * @function
+ * @async
+ *
+ * @param {Object} req - The request object.
+ * @param {string} req.params.sessionId - The session ID.
+ * @param {Object} res - The response object.
+ *
+ * @returns {Promise<void>} A Promise that resolves when the operation is complete.
+ *
+ * @throws {Error} If the operation fails, an error is thrown.
+ */
+const getChatsWithSearch = async (req, res) => {
+  /*
+    #swagger.summary = 'Get all current chats with optional search parameters'
+    #swagger.requestBody = {
+      required: true,
+      schema: {
+        type: 'object',
+        properties: {
+          searchOptions: {
+            properties: {
+              since: {
+                type: 'number',
+                description: 'Timestamp to filter chats since',
+                example: 1746618541
+              },
+              unread: {
+                type: 'boolean',
+                description: 'Filter for unread chats',
+                example: true
+              },
+            }
+          }
+        }
+      },
+    }
+  */
+  try {
+    const { searchOptions = {} } = req.body
+    const client = sessions.get(req.params.sessionId)
+    const chats = await client.getChats(searchOptions)
+    res.json({ success: true, chats })
+  } catch (error) {
+    sendErrorResponse(res, 500, error.message)
+  }
+}
+
+/**
  * Returns the profile picture URL for a given contact ID.
  *
  * @async
@@ -2170,6 +2220,7 @@ module.exports = {
   getChatById,
   getChatLabels,
   getChats,
+  getChatsWithSearch,
   getChatsByLabelId,
   getCommonGroups,
   getContactById,

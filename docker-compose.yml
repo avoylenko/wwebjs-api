@@ -10,6 +10,7 @@ services:
     restart: always
     ports:
       - "3000:3000"
+    env_file: .env
     environment:
       # Core Configuration
       - BASE_WEBHOOK_URL=http://localhost:3000/localCallbackExample
