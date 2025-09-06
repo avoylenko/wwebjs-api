@@ -15059,8 +15059,13 @@
           },
           "result": {
             "type": "array",
-            "example": [],
-            "items": {}
+            "example": [
+              "session1",
+              "session2"
+            ],
+            "items": {
+              "type": "string"
+            }
           }
         },
         "xml": {
