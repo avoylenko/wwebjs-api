@@ -219,6 +219,20 @@ const initializeEvents = (client, sessionId) => {
         logger.warn({ sessionId }, 'Error occurred on browser page. Restoring')
         restartSession(sessionId)
       })
+      client.pupPage
+        .on('console', message => {
+          const type = message.type().substr(0, 3).toUpperCase()
+          logger.debug({ sessionId, type }, `Page console log: ${message.text()}`)
+        })
+        .on('requestfailed', request => {
+          const failure = request.failure()
+          if (failure) {
+            logger.error({ sessionId, url: request.url() }, `Page request failed: ${failure.errorText}`)
+          } else {
+            logger.error({ sessionId, url: request.url() }, 'Page request failed but no failure reason provided')
+          }
+        })
+        .on('pageerror', ({ message }) => logger.error({ sessionId, message }, 'Page error occurred'))
     }).catch(e => { })
   }
 

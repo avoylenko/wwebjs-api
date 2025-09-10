@@ -11,28 +11,6 @@ services:
     ports:
       - "3000:3000"
     env_file: .env
-    environment:
-      # Core Configuration
-      - BASE_WEBHOOK_URL=http://localhost:3000/localCallbackExample
-      - MAX_ATTACHMENT_SIZE=5000000 # In bytes (5MB)
-      - SET_MESSAGES_AS_SEEN=TRUE
-      - ENABLE_LOCAL_CALLBACK_EXAMPLE=TRUE
-      - ENABLE_SWAGGER_ENDPOINT=TRUE
-      - RECOVER_SESSIONS=TRUE
-      
-      # Security Settings
-      # - API_KEY=your_global_api_key_here # Uncomment and set for production
-      
-      # Rate Limiting Configuration
-      # - RATE_LIMIT_MAX=1000 # Maximum connections per time window
-      # - RATE_LIMIT_WINDOW_MS=1000 # Time window in milliseconds
-      
-      # WhatsApp Web Configuration
-      # - WEB_VERSION='2.2328.5' # Specific WhatsApp Web version
-      # - WEB_VERSION_CACHE_TYPE=none # Options: local, remote, none
-      
-      # Callback Configuration
-      - DISABLED_CALLBACKS=message_ack|message_reaction
     volumes:
       - ./sessions:/usr/src/app/sessions
     # Optional healthcheck
