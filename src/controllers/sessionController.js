@@ -397,12 +397,79 @@ const getSessions = async (req, res) => {
       description: "Retrieved all sessions.",
       content: {
         "application/json": {
-          schema: { "$ref": "#/definitions/GetSessionsResponse" }
+          schema: { "$ref": "#/definitions/GetSessionsResponse" },
+          examples: {
+            "Success": {
+              success: true,
+              result: ["sessionId1", "sessionId2", "sessionId3"],
+              message: "Retrieved all sessions.",
+            }
+          }
+        }
+      }
+    }
+
+    #swagger.responses[404] = {
+      description: "Not found.",
+      content: {
+        "application/json": {
+          schema: { "$ref": "#/definitions/GetSessionsResponse" },
+          examples: {
+            "Bad request": {
+              value: {
+                success: false,
+                result: [],
+                message: "Sessions not found"
+              }
+            }
+          }
+        }
+      }
+    }
+
+    #swagger.responses[403] = {
+      description: "Forbidden",
+      content: {
+        "application/json": {
+          schema: { "$ref": "#/definitions/GetSessionsResponse" },
+          examples: {
+            "Forbidden": {
+              value: {
+                success: false,
+                result: [],
+                message: "Invalid API key"
+              }
+            }
+          }
+        }
+      }
+    }
+
+    #swagger.responses[500] = {
+      description: "Internal Server Error.",
+      content: {
+        "application/json": {
+          schema: { "$ref": "#/definitions/GetSessionsResponse" },
+          examples: {
+            "Internal Server Error": {
+              value: {
+                success: false,
+                result: [],
+                message: "Internal Server Error."
+              }
+            }
+          }
         }
       }
     }
   */
-  return res.json({ success: true, result: Array.from(sessions.keys()) })
+
+  if(sessions.keys().length === 0) {
+    res.status(404)
+    return res.json({ success: false, result: [], message: 'Sessions not found' })
+  }
+ 
+  return res.json({ success: true, result: Array.from(sessions.keys()), message: 'Sessions retrieved successfully'})
 }
 
 /**
