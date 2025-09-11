@@ -79,7 +79,8 @@ const doc = {
     },
     GetSessionsResponse: {
       success: true,
-      result: ['session1', 'session2']
+      result: ['session1', 'session2'],
+      message: 'Sessions retrieved successfully'
     }
   }
 }

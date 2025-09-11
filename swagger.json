@@ -120,26 +120,74 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/GetSessionsResponse"
+                },
+                "examples": {
+                  "Success": {
+                    "success": true,
+                    "result": [
+                      "sessionId1",
+                      "sessionId2",
+                      "sessionId3"
+                    ],
+                    "message": "Retrieved all sessions."
+                  }
                 }
               }
             }
           },
           "403": {
-            "description": "Forbidden.",
+            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ForbiddenResponse"
+                  "$ref": "#/components/schemas/GetSessionsResponse"
+                },
+                "examples": {
+                  "Forbidden": {
+                    "value": {
+                      "success": false,
+                      "result": [],
+                      "message": "Invalid API key"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetSessionsResponse"
+                },
+                "examples": {
+                  "Bad request": {
+                    "value": {
+                      "success": false,
+                      "result": [],
+                      "message": "Sessions not found"
+                    }
+                  }
                 }
               }
             }
           },
           "500": {
-            "description": "Server failure.",
+            "description": "Internal Server Error.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/GetSessionsResponse"
+                },
+                "examples": {
+                  "Internal Server Error": {
+                    "value": {
+                      "success": false,
+                      "result": [],
+                      "message": "Internal Server Error."
+                    }
+                  }
                 }
               }
             }
@@ -15066,6 +15114,10 @@
             "items": {
               "type": "string"
             }
+          },
+          "message": {
+            "type": "string",
+            "example": "Sessions retrieved successfully"
           }
         },
         "xml": {
