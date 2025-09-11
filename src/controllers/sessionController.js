@@ -464,7 +464,7 @@ const getSessions = async (req, res) => {
     }
   */
 
-  if(sessions.keys().length === 0) {
+  if(sessions.size === 0) {
     res.status(404)
     return res.json({ success: false, result: [], message: 'Sessions not found' })
   }
