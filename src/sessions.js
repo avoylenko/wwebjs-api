@@ -251,19 +251,19 @@ const initializeEvents = (client, sessionId) => {
     }
   })
 
-  if (isEventEnabled('call')) {
-    client.on('call', (call) => {
-      triggerWebhook(sessionWebhook, sessionId, 'call', { call })
-      triggerWebSocket(sessionId, 'call', { call })
-    })
-  }
+  // if (isEventEnabled('call')) {
+  //   client.on('call', (call) => {
+  //     triggerWebhook(sessionWebhook, sessionId, 'call', { call })
+  //     triggerWebSocket(sessionId, 'call', { call })
+  //   })
+  // }
 
-  if (isEventEnabled('change_state')) {
-    client.on('change_state', state => {
-      triggerWebhook(sessionWebhook, sessionId, 'change_state', { state })
-      triggerWebSocket(sessionId, 'change_state', { state })
-    })
-  }
+  // if (isEventEnabled('change_state')) {
+  //   client.on('change_state', state => {
+  //     triggerWebhook(sessionWebhook, sessionId, 'change_state', { state })
+  //     triggerWebSocket(sessionId, 'change_state', { state })
+  //   })
+  // }
 
   if (isEventEnabled('disconnected')) {
     client.on('disconnected', (reason) => {
@@ -272,54 +272,54 @@ const initializeEvents = (client, sessionId) => {
     })
   }
 
-  if (isEventEnabled('group_join')) {
-    client.on('group_join', (notification) => {
-      triggerWebhook(sessionWebhook, sessionId, 'group_join', { notification })
-      triggerWebSocket(sessionId, 'group_join', { notification })
-    })
-  }
+  // if (isEventEnabled('group_join')) {
+  //   client.on('group_join', (notification) => {
+  //     triggerWebhook(sessionWebhook, sessionId, 'group_join', { notification })
+  //     triggerWebSocket(sessionId, 'group_join', { notification })
+  //   })
+  // }
 
-  if (isEventEnabled('group_leave')) {
-    client.on('group_leave', (notification) => {
-      triggerWebhook(sessionWebhook, sessionId, 'group_leave', { notification })
-      triggerWebSocket(sessionId, 'group_leave', { notification })
-    })
-  }
+  // if (isEventEnabled('group_leave')) {
+  //   client.on('group_leave', (notification) => {
+  //     triggerWebhook(sessionWebhook, sessionId, 'group_leave', { notification })
+  //     triggerWebSocket(sessionId, 'group_leave', { notification })
+  //   })
+  // }
 
-  if (isEventEnabled('group_admin_changed')) {
-    client.on('group_admin_changed', (notification) => {
-      triggerWebhook(sessionWebhook, sessionId, 'group_admin_changed', { notification })
-      triggerWebSocket(sessionId, 'group_admin_changed', { notification })
-    })
-  }
+  // if (isEventEnabled('group_admin_changed')) {
+  //   client.on('group_admin_changed', (notification) => {
+  //     triggerWebhook(sessionWebhook, sessionId, 'group_admin_changed', { notification })
+  //     triggerWebSocket(sessionId, 'group_admin_changed', { notification })
+  //   })
+  // }
 
-  if (isEventEnabled('group_membership_request')) {
-    client.on('group_membership_request', (notification) => {
-      triggerWebhook(sessionWebhook, sessionId, 'group_membership_request', { notification })
-      triggerWebSocket(sessionId, 'group_membership_request', { notification })
-    })
-  }
+  // if (isEventEnabled('group_membership_request')) {
+  //   client.on('group_membership_request', (notification) => {
+  //     triggerWebhook(sessionWebhook, sessionId, 'group_membership_request', { notification })
+  //     triggerWebSocket(sessionId, 'group_membership_request', { notification })
+  //   })
+  // }
 
-  if (isEventEnabled('group_update')) {
-    client.on('group_update', (notification) => {
-      triggerWebhook(sessionWebhook, sessionId, 'group_update', { notification })
-      triggerWebSocket(sessionId, 'group_update', { notification })
-    })
-  }
+  // if (isEventEnabled('group_update')) {
+  //   client.on('group_update', (notification) => {
+  //     triggerWebhook(sessionWebhook, sessionId, 'group_update', { notification })
+  //     triggerWebSocket(sessionId, 'group_update', { notification })
+  //   })
+  // }
 
-  if (isEventEnabled('loading_screen')) {
-    client.on('loading_screen', (percent, message) => {
-      triggerWebhook(sessionWebhook, sessionId, 'loading_screen', { percent, message })
-      triggerWebSocket(sessionId, 'loading_screen', { percent, message })
-    })
-  }
+  // if (isEventEnabled('loading_screen')) {
+  //   client.on('loading_screen', (percent, message) => {
+  //     triggerWebhook(sessionWebhook, sessionId, 'loading_screen', { percent, message })
+  //     triggerWebSocket(sessionId, 'loading_screen', { percent, message })
+  //   })
+  // }
 
-  if (isEventEnabled('media_uploaded')) {
-    client.on('media_uploaded', (message) => {
-      triggerWebhook(sessionWebhook, sessionId, 'media_uploaded', { message })
-      triggerWebSocket(sessionId, 'media_uploaded', { message })
-    })
-  }
+  // if (isEventEnabled('media_uploaded')) {
+  //   client.on('media_uploaded', (message) => {
+  //     triggerWebhook(sessionWebhook, sessionId, 'media_uploaded', { message })
+  //     triggerWebSocket(sessionId, 'media_uploaded', { message })
+  //   })
+  // }
 
   client.on('message', async (message) => {
     if (isEventEnabled('message')) {
@@ -344,54 +344,54 @@ const initializeEvents = (client, sessionId) => {
     }
   })
 
-  if (isEventEnabled('message_ack')) {
-    client.on('message_ack', (message, ack) => {
-      triggerWebhook(sessionWebhook, sessionId, 'message_ack', { message, ack })
-      triggerWebSocket(sessionId, 'message_ack', { message, ack })
-    })
-  }
+  // if (isEventEnabled('message_ack')) {
+  //   client.on('message_ack', (message, ack) => {
+  //     triggerWebhook(sessionWebhook, sessionId, 'message_ack', { message, ack })
+  //     triggerWebSocket(sessionId, 'message_ack', { message, ack })
+  //   })
+  // }
 
-  if (isEventEnabled('message_create')) {
-    client.on('message_create', (message) => {
-      triggerWebhook(sessionWebhook, sessionId, 'message_create', { message })
-      triggerWebSocket(sessionId, 'message_create', { message })
-    })
-  }
+  // if (isEventEnabled('message_create')) {
+  //   client.on('message_create', (message) => {
+  //     triggerWebhook(sessionWebhook, sessionId, 'message_create', { message })
+  //     triggerWebSocket(sessionId, 'message_create', { message })
+  //   })
+  // }
 
-  if (isEventEnabled('message_reaction')) {
-    client.on('message_reaction', (reaction) => {
-      triggerWebhook(sessionWebhook, sessionId, 'message_reaction', { reaction })
-      triggerWebSocket(sessionId, 'message_reaction', { reaction })
-    })
-  }
+  // if (isEventEnabled('message_reaction')) {
+  //   client.on('message_reaction', (reaction) => {
+  //     triggerWebhook(sessionWebhook, sessionId, 'message_reaction', { reaction })
+  //     triggerWebSocket(sessionId, 'message_reaction', { reaction })
+  //   })
+  // }
 
-  if (isEventEnabled('message_edit')) {
-    client.on('message_edit', (message, newBody, prevBody) => {
-      triggerWebhook(sessionWebhook, sessionId, 'message_edit', { message, newBody, prevBody })
-      triggerWebSocket(sessionId, 'message_edit', { message, newBody, prevBody })
-    })
-  }
+  // if (isEventEnabled('message_edit')) {
+  //   client.on('message_edit', (message, newBody, prevBody) => {
+  //     triggerWebhook(sessionWebhook, sessionId, 'message_edit', { message, newBody, prevBody })
+  //     triggerWebSocket(sessionId, 'message_edit', { message, newBody, prevBody })
+  //   })
+  // }
 
-  if (isEventEnabled('message_ciphertext')) {
-    client.on('message_ciphertext', (message) => {
-      triggerWebhook(sessionWebhook, sessionId, 'message_ciphertext', { message })
-      triggerWebSocket(sessionId, 'message_ciphertext', { message })
-    })
-  }
+  // if (isEventEnabled('message_ciphertext')) {
+  //   client.on('message_ciphertext', (message) => {
+  //     triggerWebhook(sessionWebhook, sessionId, 'message_ciphertext', { message })
+  //     triggerWebSocket(sessionId, 'message_ciphertext', { message })
+  //   })
+  // }
 
-  if (isEventEnabled('message_revoke_everyone')) {
-    client.on('message_revoke_everyone', (message) => {
-      triggerWebhook(sessionWebhook, sessionId, 'message_revoke_everyone', { message })
-      triggerWebSocket(sessionId, 'message_revoke_everyone', { message })
-    })
-  }
+  // if (isEventEnabled('message_revoke_everyone')) {
+  //   client.on('message_revoke_everyone', (message) => {
+  //     triggerWebhook(sessionWebhook, sessionId, 'message_revoke_everyone', { message })
+  //     triggerWebSocket(sessionId, 'message_revoke_everyone', { message })
+  //   })
+  // }
 
-  if (isEventEnabled('message_revoke_me')) {
-    client.on('message_revoke_me', (message, revokedMsg) => {
-      triggerWebhook(sessionWebhook, sessionId, 'message_revoke_me', { message, revokedMsg })
-      triggerWebSocket(sessionId, 'message_revoke_me', { message, revokedMsg })
-    })
-  }
+  // if (isEventEnabled('message_revoke_me')) {
+  //   client.on('message_revoke_me', (message, revokedMsg) => {
+  //     triggerWebhook(sessionWebhook, sessionId, 'message_revoke_me', { message, revokedMsg })
+  //     triggerWebSocket(sessionId, 'message_revoke_me', { message, revokedMsg })
+  //   })
+  // }
 
   client.on('qr', (qr) => {
     // inject qr code into session
@@ -409,48 +409,48 @@ const initializeEvents = (client, sessionId) => {
     })
   }
 
-  if (isEventEnabled('contact_changed')) {
-    client.on('contact_changed', (message, oldId, newId, isContact) => {
-      triggerWebhook(sessionWebhook, sessionId, 'contact_changed', { message, oldId, newId, isContact })
-      triggerWebSocket(sessionId, 'contact_changed', { message, oldId, newId, isContact })
-    })
-  }
+  // if (isEventEnabled('contact_changed')) {
+  //   client.on('contact_changed', (message, oldId, newId, isContact) => {
+  //     triggerWebhook(sessionWebhook, sessionId, 'contact_changed', { message, oldId, newId, isContact })
+  //     triggerWebSocket(sessionId, 'contact_changed', { message, oldId, newId, isContact })
+  //   })
+  // }
 
-  if (isEventEnabled('chat_removed')) {
-    client.on('chat_removed', (chat) => {
-      triggerWebhook(sessionWebhook, sessionId, 'chat_removed', { chat })
-      triggerWebSocket(sessionId, 'chat_removed', { chat })
-    })
-  }
+  // if (isEventEnabled('chat_removed')) {
+  //   client.on('chat_removed', (chat) => {
+  //     triggerWebhook(sessionWebhook, sessionId, 'chat_removed', { chat })
+  //     triggerWebSocket(sessionId, 'chat_removed', { chat })
+  //   })
+  // }
 
-  if (isEventEnabled('chat_archived')) {
-    client.on('chat_archived', (chat, currState, prevState) => {
-      triggerWebhook(sessionWebhook, sessionId, 'chat_archived', { chat, currState, prevState })
-      triggerWebSocket(sessionId, 'chat_archived', { chat, currState, prevState })
-    })
-  }
+  // if (isEventEnabled('chat_archived')) {
+  //   client.on('chat_archived', (chat, currState, prevState) => {
+  //     triggerWebhook(sessionWebhook, sessionId, 'chat_archived', { chat, currState, prevState })
+  //     triggerWebSocket(sessionId, 'chat_archived', { chat, currState, prevState })
+  //   })
+  // }
 
-  if (isEventEnabled('unread_count')) {
-    client.on('unread_count', (chat) => {
-      triggerWebhook(sessionWebhook, sessionId, 'unread_count', { chat })
-      triggerWebSocket(sessionId, 'unread_count', { chat })
-    })
-  }
+  // if (isEventEnabled('unread_count')) {
+  //   client.on('unread_count', (chat) => {
+  //     triggerWebhook(sessionWebhook, sessionId, 'unread_count', { chat })
+  //     triggerWebSocket(sessionId, 'unread_count', { chat })
+  //   })
+  // }
 
-  if (isEventEnabled('vote_update')) {
-    client.on('vote_update', (vote) => {
-      triggerWebhook(sessionWebhook, sessionId, 'vote_update', { vote })
-      triggerWebSocket(sessionId, 'vote_update', { vote })
-    })
-  }
+  // if (isEventEnabled('vote_update')) {
+  //   client.on('vote_update', (vote) => {
+  //     triggerWebhook(sessionWebhook, sessionId, 'vote_update', { vote })
+  //     triggerWebSocket(sessionId, 'vote_update', { vote })
+  //   })
+  // }
 
-  if (isEventEnabled('code')) {
-    client.on('code', (code) => {
-      triggerWebhook(sessionWebhook, sessionId, 'code', { code })
-      triggerWebSocket(sessionId, 'code', { code })
-    })
-  }
-}
+//   if (isEventEnabled('code')) {
+//     client.on('code', (code) => {
+//       triggerWebhook(sessionWebhook, sessionId, 'code', { code })
+//       triggerWebSocket(sessionId, 'code', { code })
+//     })
+//   }
+// }
 
 // Function to delete client session folder
 const deleteSessionFolder = async (sessionId) => {
