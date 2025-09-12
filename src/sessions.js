@@ -450,7 +450,7 @@ const initializeEvents = (client, sessionId) => {
 //       triggerWebSocket(sessionId, 'code', { code })
 //     })
 //   }
-// }
+}
 
 // Function to delete client session folder
 const deleteSessionFolder = async (sessionId) => {
