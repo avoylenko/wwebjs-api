@@ -4,13 +4,20 @@ const { logger } = require('./logger')
 const ChatFactory = require('whatsapp-web.js/src/factories/ChatFactory')
 const Client = require('whatsapp-web.js').Client
 const { Chat, Message } = require('whatsapp-web.js/src/structures')
+const { getWebhooksForEvent } = require('./webhookManager')
 
 // Trigger webhook endpoint
-const triggerWebhook = (webhookURL, sessionId, dataType, data) => {
+const triggerWebhook = (sessionId, dataType, data) => {
   if (enableWebHook) {
-    axios.post(webhookURL, { dataType, data, sessionId }, { headers: { 'x-api-key': globalApiKey } })
-      .then(() => logger.debug({ sessionId, dataType, data: data || '' }, `Webhook message sent to ${webhookURL}`))
-      .catch(error => logger.error({ sessionId, dataType, err: error, data: data || '' }, `Failed to send webhook message to ${webhookURL}`))
+    // Get all webhooks that should receive this event
+    const webhookURLs = getWebhooksForEvent(sessionId, dataType)
+    
+    // Send to all matching webhooks in parallel
+    webhookURLs.forEach(webhookURL => {
+      axios.post(webhookURL, { dataType, data, sessionId }, { headers: { 'x-api-key': globalApiKey } })
+        .then(() => logger.debug({ sessionId, dataType, data: data || '' }, `Webhook message sent to ${webhookURL}`))
+        .catch(error => logger.error({ sessionId, dataType, err: error, data: data || '' }, `Failed to send webhook message to ${webhookURL}`))
+    })
   }
 }
 

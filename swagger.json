@@ -873,6 +873,602 @@
         ]
       }
     },
+    "/webhook/events": {
+      "get": {
+        "tags": [
+          "Webhook"
+        ],
+        "summary": "Get valid event types",
+        "description": "Retrieve list of all valid event types that can be used in webhook filters",
+        "responses": {
+          "200": {
+            "description": "Event types retrieved successfully",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "eventTypes": [
+                    "message",
+                    "qr",
+                    "ready",
+                    "authenticated",
+                    "disconnected"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          }
+        ]
+      }
+    },
+    "/webhook/sessions": {
+      "get": {
+        "tags": [
+          "Webhook"
+        ],
+        "summary": "Get all sessions with webhooks",
+        "description": "Retrieve all sessions and their configured webhooks",
+        "responses": {
+          "200": {
+            "description": "Sessions retrieved successfully",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "sessions": [
+                    {
+                      "sessionId": "main",
+                      "webhooks": [
+                        {
+                          "id": "webhook-uuid",
+                          "url": "https://example.com/webhook",
+                          "events": [
+                            "message"
+                          ],
+                          "enabled": true
+                        }
+                      ]
+                    },
+                    {
+                      "sessionId": "support",
+                      "webhooks": []
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server Failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          }
+        ]
+      }
+    },
+    "/webhook/session/{sessionId}": {
+      "get": {
+        "tags": [
+          "Webhook"
+        ],
+        "summary": "Get webhooks for session",
+        "description": "Retrieve all webhooks configured for a specific session",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Unique identifier for the session (alphanumeric and - allowed)",
+            "example": "f8377d8d-a589-4242-9ba6-9486a04ef80c"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Webhooks retrieved successfully",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "webhooks": [
+                    {
+                      "id": "webhook-uuid",
+                      "url": "https://example.com/webhook",
+                      "events": [
+                        "message",
+                        "qr"
+                      ],
+                      "enabled": true,
+                      "createdAt": "2025-01-01T00:00:00.000Z"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server Failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Webhook"
+        ],
+        "summary": "Add webhook to session",
+        "description": "Add a new webhook to a session with optional event filtering. Valid event types: auth_failure, authenticated, call, change_state, disconnected, group_join, group_leave, group_admin_changed, group_membership_request, group_update, loading_screen, media_uploaded, message, message_ack, message_create, message_reaction, message_edit, message_ciphertext, message_revoke_everyone, message_revoke_me, qr, ready, contact_changed, chat_removed, chat_archived, unread_count, vote_update, code, media",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Unique identifier for the session (alphanumeric and - allowed)",
+            "example": "f8377d8d-a589-4242-9ba6-9486a04ef80c"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Webhook created successfully",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "webhook": {
+                    "id": "webhook-uuid",
+                    "url": "https://example.com/webhook",
+                    "events": [
+                      "message",
+                      "qr"
+                    ],
+                    "enabled": true,
+                    "createdAt": "2025-01-01T00:00:00.000Z"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "url"
+                ],
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "description": "Webhook URL (must start with http:// or https://)",
+                    "example": "https://example.com/webhook"
+                  },
+                  "events": {
+                    "type": "array",
+                    "description": "Event types to send to this webhook. Empty array means all events. Valid events: auth_failure, authenticated, call, change_state, disconnected, group_join, group_leave, group_admin_changed, group_membership_request, group_update, loading_screen, media_uploaded, message, message_ack, message_create, message_reaction, message_edit, message_ciphertext, message_revoke_everyone, message_revoke_me, qr, ready, contact_changed, chat_removed, chat_archived, unread_count, vote_update, code, media",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "auth_failure",
+                        "authenticated",
+                        "call",
+                        "change_state",
+                        "disconnected",
+                        "group_join",
+                        "group_leave",
+                        "group_admin_changed",
+                        "group_membership_request",
+                        "group_update",
+                        "loading_screen",
+                        "media_uploaded",
+                        "message",
+                        "message_ack",
+                        "message_create",
+                        "message_reaction",
+                        "message_edit",
+                        "message_ciphertext",
+                        "message_revoke_everyone",
+                        "message_revoke_me",
+                        "qr",
+                        "ready",
+                        "contact_changed",
+                        "chat_removed",
+                        "chat_archived",
+                        "unread_count",
+                        "vote_update",
+                        "code",
+                        "media"
+                      ]
+                    },
+                    "example": [
+                      "message",
+                      "qr",
+                      "ready"
+                    ]
+                  },
+                  "enabled": {
+                    "type": "boolean",
+                    "description": "Whether webhook is enabled",
+                    "example": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/webhook/session/{sessionId}/{webhookId}": {
+      "put": {
+        "tags": [
+          "Webhook"
+        ],
+        "summary": "Update webhook",
+        "description": "Update an existing webhook configuration. Valid event types: auth_failure, authenticated, call, change_state, disconnected, group_join, group_leave, group_admin_changed, group_membership_request, group_update, loading_screen, media_uploaded, message, message_ack, message_create, message_reaction, message_edit, message_ciphertext, message_revoke_everyone, message_revoke_me, qr, ready, contact_changed, chat_removed, chat_archived, unread_count, vote_update, code, media",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Unique identifier for the session (alphanumeric and - allowed)",
+            "example": "f8377d8d-a589-4242-9ba6-9486a04ef80c"
+          },
+          {
+            "name": "webhookId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Webhook updated successfully",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "webhook": {
+                    "id": "webhook-uuid",
+                    "url": "https://example.com/webhook",
+                    "events": [
+                      "message"
+                    ],
+                    "enabled": true,
+                    "updatedAt": "2025-01-01T00:00:00.000Z"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "description": "Webhook URL (must start with http:// or https://)",
+                    "example": "https://example.com/webhook"
+                  },
+                  "events": {
+                    "type": "array",
+                    "description": "Event types to send to this webhook. Empty array means all events. Valid events: auth_failure, authenticated, call, change_state, disconnected, group_join, group_leave, group_admin_changed, group_membership_request, group_update, loading_screen, media_uploaded, message, message_ack, message_create, message_reaction, message_edit, message_ciphertext, message_revoke_everyone, message_revoke_me, qr, ready, contact_changed, chat_removed, chat_archived, unread_count, vote_update, code, media",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "auth_failure",
+                        "authenticated",
+                        "call",
+                        "change_state",
+                        "disconnected",
+                        "group_join",
+                        "group_leave",
+                        "group_admin_changed",
+                        "group_membership_request",
+                        "group_update",
+                        "loading_screen",
+                        "media_uploaded",
+                        "message",
+                        "message_ack",
+                        "message_create",
+                        "message_reaction",
+                        "message_edit",
+                        "message_ciphertext",
+                        "message_revoke_everyone",
+                        "message_revoke_me",
+                        "qr",
+                        "ready",
+                        "contact_changed",
+                        "chat_removed",
+                        "chat_archived",
+                        "unread_count",
+                        "vote_update",
+                        "code",
+                        "media"
+                      ]
+                    },
+                    "example": [
+                      "message",
+                      "ready"
+                    ]
+                  },
+                  "enabled": {
+                    "type": "boolean",
+                    "description": "Whether webhook is enabled",
+                    "example": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Webhook"
+        ],
+        "summary": "Delete webhook",
+        "description": "Delete a webhook from a session",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Unique identifier for the session (alphanumeric and - allowed)",
+            "example": "f8377d8d-a589-4242-9ba6-9486a04ef80c"
+          },
+          {
+            "name": "webhookId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Webhook deleted successfully",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "message": "Webhook deleted successfully"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          }
+        ]
+      }
+    },
     "/client/getClassInfo/{sessionId}": {
       "get": {
         "tags": [

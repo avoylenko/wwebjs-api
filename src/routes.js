@@ -13,6 +13,7 @@ const groupChatController = require('./controllers/groupChatController')
 const messageController = require('./controllers/messageController')
 const contactController = require('./controllers/contactController')
 const channelController = require('./controllers/channelController')
+const webhookController = require('./controllers/webhookController')
 
 /**
  * ================
@@ -49,6 +50,23 @@ sessionRouter.get('/terminate/:sessionId', middleware.sessionNameValidation, ses
 sessionRouter.get('/terminateInactive', sessionController.terminateInactiveSessions)
 sessionRouter.get('/terminateAll', sessionController.terminateAllSessions)
 sessionRouter.get('/getPageScreenshot/:sessionId', middleware.sessionNameValidation, sessionController.getPageScreenshot)
+
+/**
+ * ================
+ * WEBHOOK ENDPOINTS
+ * ================
+ */
+
+const webhookRouter = express.Router()
+webhookRouter.use(middleware.apikey)
+routes.use('/webhook', webhookRouter)
+
+webhookRouter.get('/events', webhookController.getEventTypes)
+webhookRouter.get('/sessions', webhookController.getAllSessionWebhooks)
+webhookRouter.get('/session/:sessionId', middleware.sessionNameValidation, webhookController.getSessionWebhooksEndpoint)
+webhookRouter.post('/session/:sessionId', middleware.sessionNameValidation, webhookController.addSessionWebhook)
+webhookRouter.put('/session/:sessionId/:webhookId', middleware.sessionNameValidation, webhookController.updateSessionWebhook)
+webhookRouter.delete('/session/:sessionId/:webhookId', middleware.sessionNameValidation, webhookController.deleteSessionWebhook)
 
 /**
  * ================

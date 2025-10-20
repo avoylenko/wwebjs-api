@@ -9,6 +9,9 @@ sessions
 sessions_test
 .wwebjs_cache
 
+# Ignore webhook configurations (except the template)
+sessions/webhooks.json
+
 # Ignore logs
 logs
 

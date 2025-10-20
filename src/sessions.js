@@ -2,7 +2,7 @@ const { Client, LocalAuth } = require('whatsapp-web.js')
 const fs = require('fs')
 const path = require('path')
 const sessions = new Map()
-const { baseWebhookURL, sessionFolderPath, maxAttachmentSize, setMessagesAsSeen, webVersion, webVersionCacheType, recoverSessions, chromeBin, headless, releaseBrowserLock } = require('./config')
+const { sessionFolderPath, maxAttachmentSize, setMessagesAsSeen, webVersion, webVersionCacheType, recoverSessions, chromeBin, headless, releaseBrowserLock } = require('./config')
 const { triggerWebhook, waitForNestedObject, isEventEnabled, sendMessageSeenStatus, sleep, patchWWebLibrary } = require('./utils')
 const { logger } = require('./logger')
 const { initWebSocketServer, terminateWebSocketServer, triggerWebSocket } = require('./websocket')
@@ -96,9 +96,13 @@ const setupSession = async (sessionId) => {
     delete localAuth.logout
     localAuth.logout = () => { }
 
+    // Ensure we have a valid executable path
+    const executablePath = chromeBin || '/usr/bin/chromium'
+    logger.info({ sessionId, executablePath }, 'Using executable path for browser')
+
     const clientOptions = {
       puppeteer: {
-        executablePath: chromeBin,
+        executablePath,
         headless,
         args: [
           '--autoplay-policy=user-gesture-required',
@@ -199,9 +203,6 @@ const setupSession = async (sessionId) => {
 }
 
 const initializeEvents = (client, sessionId) => {
-  // check if the session webhook is overridden
-  const sessionWebhook = process.env[sessionId.toUpperCase() + '_WEBHOOK_URL'] || baseWebhookURL
-
   if (recoverSessions) {
     waitForNestedObject(client, 'pupPage').then(() => {
       const restartSession = async (sessionId) => {
@@ -238,7 +239,7 @@ const initializeEvents = (client, sessionId) => {
 
   if (isEventEnabled('auth_failure')) {
     client.on('auth_failure', (msg) => {
-      triggerWebhook(sessionWebhook, sessionId, 'status', { msg })
+      triggerWebhook(sessionId, 'auth_failure', { msg })
       triggerWebSocket(sessionId, 'status', { msg })
     })
   }
@@ -246,90 +247,90 @@ const initializeEvents = (client, sessionId) => {
   client.on('authenticated', () => {
     client.qr = null
     if (isEventEnabled('authenticated')) {
-      triggerWebhook(sessionWebhook, sessionId, 'authenticated')
+      triggerWebhook(sessionId, 'authenticated')
       triggerWebSocket(sessionId, 'authenticated')
     }
   })
 
   if (isEventEnabled('call')) {
     client.on('call', (call) => {
-      triggerWebhook(sessionWebhook, sessionId, 'call', { call })
+      triggerWebhook(sessionId, 'call', { call })
       triggerWebSocket(sessionId, 'call', { call })
     })
   }
 
   if (isEventEnabled('change_state')) {
     client.on('change_state', state => {
-      triggerWebhook(sessionWebhook, sessionId, 'change_state', { state })
+      triggerWebhook(sessionId, 'change_state', { state })
       triggerWebSocket(sessionId, 'change_state', { state })
     })
   }
 
   if (isEventEnabled('disconnected')) {
     client.on('disconnected', (reason) => {
-      triggerWebhook(sessionWebhook, sessionId, 'disconnected', { reason })
+      triggerWebhook(sessionId, 'disconnected', { reason })
       triggerWebSocket(sessionId, 'disconnected', { reason })
     })
   }
 
   if (isEventEnabled('group_join')) {
     client.on('group_join', (notification) => {
-      triggerWebhook(sessionWebhook, sessionId, 'group_join', { notification })
+      triggerWebhook(sessionId, 'group_join', { notification })
       triggerWebSocket(sessionId, 'group_join', { notification })
     })
   }
 
   if (isEventEnabled('group_leave')) {
     client.on('group_leave', (notification) => {
-      triggerWebhook(sessionWebhook, sessionId, 'group_leave', { notification })
+      triggerWebhook(sessionId, 'group_leave', { notification })
       triggerWebSocket(sessionId, 'group_leave', { notification })
     })
   }
 
   if (isEventEnabled('group_admin_changed')) {
     client.on('group_admin_changed', (notification) => {
-      triggerWebhook(sessionWebhook, sessionId, 'group_admin_changed', { notification })
+      triggerWebhook(sessionId, 'group_admin_changed', { notification })
       triggerWebSocket(sessionId, 'group_admin_changed', { notification })
     })
   }
 
   if (isEventEnabled('group_membership_request')) {
     client.on('group_membership_request', (notification) => {
-      triggerWebhook(sessionWebhook, sessionId, 'group_membership_request', { notification })
+      triggerWebhook(sessionId, 'group_membership_request', { notification })
       triggerWebSocket(sessionId, 'group_membership_request', { notification })
     })
   }
 
   if (isEventEnabled('group_update')) {
     client.on('group_update', (notification) => {
-      triggerWebhook(sessionWebhook, sessionId, 'group_update', { notification })
+      triggerWebhook(sessionId, 'group_update', { notification })
       triggerWebSocket(sessionId, 'group_update', { notification })
     })
   }
 
   if (isEventEnabled('loading_screen')) {
     client.on('loading_screen', (percent, message) => {
-      triggerWebhook(sessionWebhook, sessionId, 'loading_screen', { percent, message })
+      triggerWebhook(sessionId, 'loading_screen', { percent, message })
       triggerWebSocket(sessionId, 'loading_screen', { percent, message })
     })
   }
 
   if (isEventEnabled('media_uploaded')) {
     client.on('media_uploaded', (message) => {
-      triggerWebhook(sessionWebhook, sessionId, 'media_uploaded', { message })
+      triggerWebhook(sessionId, 'media_uploaded', { message })
       triggerWebSocket(sessionId, 'media_uploaded', { message })
     })
   }
 
   client.on('message', async (message) => {
     if (isEventEnabled('message')) {
-      triggerWebhook(sessionWebhook, sessionId, 'message', { message })
+      triggerWebhook(sessionId, 'message', { message })
       triggerWebSocket(sessionId, 'message', { message })
       if (message.hasMedia && message._data?.size < maxAttachmentSize) {
       // custom service event
         if (isEventEnabled('media')) {
           message.downloadMedia().then(messageMedia => {
-            triggerWebhook(sessionWebhook, sessionId, 'media', { messageMedia, message })
+            triggerWebhook(sessionId, 'media', { messageMedia, message })
             triggerWebSocket(sessionId, 'media', { messageMedia, message })
           }).catch(error => {
             logger.error({ sessionId, err: error }, 'Failed to download media')
@@ -346,49 +347,49 @@ const initializeEvents = (client, sessionId) => {
 
   if (isEventEnabled('message_ack')) {
     client.on('message_ack', (message, ack) => {
-      triggerWebhook(sessionWebhook, sessionId, 'message_ack', { message, ack })
+      triggerWebhook(sessionId, 'message_ack', { message, ack })
       triggerWebSocket(sessionId, 'message_ack', { message, ack })
     })
   }
 
   if (isEventEnabled('message_create')) {
     client.on('message_create', (message) => {
-      triggerWebhook(sessionWebhook, sessionId, 'message_create', { message })
+      triggerWebhook(sessionId, 'message_create', { message })
       triggerWebSocket(sessionId, 'message_create', { message })
     })
   }
 
   if (isEventEnabled('message_reaction')) {
     client.on('message_reaction', (reaction) => {
-      triggerWebhook(sessionWebhook, sessionId, 'message_reaction', { reaction })
+      triggerWebhook(sessionId, 'message_reaction', { reaction })
       triggerWebSocket(sessionId, 'message_reaction', { reaction })
     })
   }
 
   if (isEventEnabled('message_edit')) {
     client.on('message_edit', (message, newBody, prevBody) => {
-      triggerWebhook(sessionWebhook, sessionId, 'message_edit', { message, newBody, prevBody })
+      triggerWebhook(sessionId, 'message_edit', { message, newBody, prevBody })
       triggerWebSocket(sessionId, 'message_edit', { message, newBody, prevBody })
     })
   }
 
   if (isEventEnabled('message_ciphertext')) {
     client.on('message_ciphertext', (message) => {
-      triggerWebhook(sessionWebhook, sessionId, 'message_ciphertext', { message })
+      triggerWebhook(sessionId, 'message_ciphertext', { message })
       triggerWebSocket(sessionId, 'message_ciphertext', { message })
     })
   }
 
   if (isEventEnabled('message_revoke_everyone')) {
     client.on('message_revoke_everyone', (message) => {
-      triggerWebhook(sessionWebhook, sessionId, 'message_revoke_everyone', { message })
+      triggerWebhook(sessionId, 'message_revoke_everyone', { message })
       triggerWebSocket(sessionId, 'message_revoke_everyone', { message })
     })
   }
 
   if (isEventEnabled('message_revoke_me')) {
     client.on('message_revoke_me', (message, revokedMsg) => {
-      triggerWebhook(sessionWebhook, sessionId, 'message_revoke_me', { message, revokedMsg })
+      triggerWebhook(sessionId, 'message_revoke_me', { message, revokedMsg })
       triggerWebSocket(sessionId, 'message_revoke_me', { message, revokedMsg })
     })
   }
@@ -397,56 +398,56 @@ const initializeEvents = (client, sessionId) => {
     // inject qr code into session
     client.qr = qr
     if (isEventEnabled('qr')) {
-      triggerWebhook(sessionWebhook, sessionId, 'qr', { qr })
+      triggerWebhook(sessionId, 'qr', { qr })
       triggerWebSocket(sessionId, 'qr', { qr })
     }
   })
 
   if (isEventEnabled('ready')) {
     client.on('ready', () => {
-      triggerWebhook(sessionWebhook, sessionId, 'ready')
+      triggerWebhook(sessionId, 'ready')
       triggerWebSocket(sessionId, 'ready')
     })
   }
 
   if (isEventEnabled('contact_changed')) {
     client.on('contact_changed', (message, oldId, newId, isContact) => {
-      triggerWebhook(sessionWebhook, sessionId, 'contact_changed', { message, oldId, newId, isContact })
+      triggerWebhook(sessionId, 'contact_changed', { message, oldId, newId, isContact })
       triggerWebSocket(sessionId, 'contact_changed', { message, oldId, newId, isContact })
     })
   }
 
   if (isEventEnabled('chat_removed')) {
     client.on('chat_removed', (chat) => {
-      triggerWebhook(sessionWebhook, sessionId, 'chat_removed', { chat })
+      triggerWebhook(sessionId, 'chat_removed', { chat })
       triggerWebSocket(sessionId, 'chat_removed', { chat })
     })
   }
 
   if (isEventEnabled('chat_archived')) {
     client.on('chat_archived', (chat, currState, prevState) => {
-      triggerWebhook(sessionWebhook, sessionId, 'chat_archived', { chat, currState, prevState })
+      triggerWebhook(sessionId, 'chat_archived', { chat, currState, prevState })
       triggerWebSocket(sessionId, 'chat_archived', { chat, currState, prevState })
     })
   }
 
   if (isEventEnabled('unread_count')) {
     client.on('unread_count', (chat) => {
-      triggerWebhook(sessionWebhook, sessionId, 'unread_count', { chat })
+      triggerWebhook(sessionId, 'unread_count', { chat })
       triggerWebSocket(sessionId, 'unread_count', { chat })
     })
   }
 
   if (isEventEnabled('vote_update')) {
     client.on('vote_update', (vote) => {
-      triggerWebhook(sessionWebhook, sessionId, 'vote_update', { vote })
+      triggerWebhook(sessionId, 'vote_update', { vote })
       triggerWebSocket(sessionId, 'vote_update', { vote })
     })
   }
 
   if (isEventEnabled('code')) {
     client.on('code', (code) => {
-      triggerWebhook(sessionWebhook, sessionId, 'code', { code })
+      triggerWebhook(sessionId, 'code', { code })
       triggerWebSocket(sessionId, 'code', { code })
     })
   }
