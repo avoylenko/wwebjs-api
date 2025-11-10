@@ -3,7 +3,7 @@ require('dotenv').config({ path: process.env.ENV_PATH || '.env' })
 
 // setup global const
 const servicePort = process.env.PORT || 3000
-const sessionFolderPath = process.env.SESSIONS_PATH || './sessions'
+const sessionFolderPath = process.env.SESSIONS_PATH || '/usr/src/app/sessions'
 const enableLocalCallbackExample = (process.env.ENABLE_LOCAL_CALLBACK_EXAMPLE || '').toLowerCase() === 'true'
 const globalApiKey = process.env.API_KEY
 const baseWebhookURL = process.env.BASE_WEBHOOK_URL
