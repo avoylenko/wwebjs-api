@@ -1,7 +1,8 @@
 // Load environment variables from .env file
-require('dotenv').config()
+require('dotenv').config({ path: process.env.ENV_PATH || '.env' })
 
 // setup global const
+const servicePort = process.env.PORT || 3000
 const sessionFolderPath = process.env.SESSIONS_PATH || './sessions'
 const enableLocalCallbackExample = (process.env.ENABLE_LOCAL_CALLBACK_EXAMPLE || '').toLowerCase() === 'true'
 const globalApiKey = process.env.API_KEY
@@ -22,10 +23,11 @@ const logLevel = process.env.LOG_LEVEL || 'info'
 const enableWebHook = process.env.ENABLE_WEBHOOK ? (process.env.ENABLE_WEBHOOK).toLowerCase() === 'true' : true
 const enableWebSocket = process.env.ENABLE_WEBSOCKET ? (process.env.ENABLE_WEBSOCKET).toLowerCase() === 'true' : false
 const autoStartSessions = process.env.AUTO_START_SESSIONS ? (process.env.AUTO_START_SESSIONS).toLowerCase() === 'true' : true
-const basePath = process.env.BASE_PATH || ''
+const basePath = process.env.BASE_PATH || '/'
 const trustProxy = process.env.TRUST_PROXY ? (process.env.TRUST_PROXY).toLowerCase() === 'true' : false
 
 module.exports = {
+  servicePort,
   sessionFolderPath,
   enableLocalCallbackExample,
   globalApiKey,

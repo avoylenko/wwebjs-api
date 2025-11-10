@@ -43,7 +43,7 @@ cd wwebjs-api
 3. Run the Docker Compose:
 
 ```bash
-docker-compose pull && docker-compose up
+docker compose pull && docker compose up
 ```
 4. Visit http://localhost:3000/session/start/ABCD
 

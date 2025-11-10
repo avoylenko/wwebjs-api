@@ -1,14 +1,8 @@
-// Load environment variables first
-require('dotenv').config({ path: process.env.ENV_PATH || '.env' })
-
 const app = require('./src/app')
-const { baseWebhookURL, enableWebHook, enableWebSocket, autoStartSessions } = require('./src/config')
+const { servicePort, baseWebhookURL, enableWebHook, enableWebSocket, autoStartSessions } = require('./src/config')
 const { logger } = require('./src/logger')
 const { handleUpgrade } = require('./src/websocket')
 const { restoreSessions } = require('./src/sessions')
-
-// Start the server
-const port = process.env.PORT || 3000
 
 // Check if BASE_WEBHOOK_URL environment variable is available when WebHook is enabled
 if (!baseWebhookURL && enableWebHook) {
@@ -16,8 +10,8 @@ if (!baseWebhookURL && enableWebHook) {
   process.exit(1) // Terminate the application with an error code
 }
 
-const server = app.listen(port, () => {
-  logger.info(`Server running on port ${port}`)
+const server = app.listen(servicePort, () => {
+  logger.info(`Server running on port ${servicePort}`)
   logger.debug({ configuration: require('./src/config') }, 'Service configuration')
   if (autoStartSessions) {
     logger.info('Starting all sessions')

@@ -17,7 +17,6 @@ app.use(express.json({ limit: maxAttachmentSize + 1000000 }))
 app.use(express.urlencoded({ limit: maxAttachmentSize + 1000000, extended: true }))
 
 // Mount routes with configurable base path
-const mountPath = basePath || '/'
-app.use(mountPath, routes)
+app.use(basePath, routes)
 
 module.exports = app
