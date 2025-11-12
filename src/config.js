@@ -4,7 +4,6 @@ require('dotenv').config({ path: process.env.ENV_PATH || '.env' })
 // setup global const
 const servicePort = process.env.PORT || 3000
 const sessionFolderPath = process.env.SESSIONS_PATH || './sessions'
-const enableLocalCallbackExample = (process.env.ENABLE_LOCAL_CALLBACK_EXAMPLE || '').toLowerCase() === 'true'
 const globalApiKey = process.env.API_KEY
 const baseWebhookURL = process.env.BASE_WEBHOOK_URL
 const maxAttachmentSize = parseInt(process.env.MAX_ATTACHMENT_SIZE) || 10000000
@@ -29,7 +28,6 @@ const trustProxy = process.env.TRUST_PROXY ? (process.env.TRUST_PROXY).toLowerCa
 module.exports = {
   servicePort,
   sessionFolderPath,
-  enableLocalCallbackExample,
   globalApiKey,
   baseWebhookURL,
   maxAttachmentSize,
