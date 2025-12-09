@@ -14,8 +14,10 @@ ARG USE_EDGE=false
 COPY package*.json ./
 
 RUN if [ "$USE_EDGE" = "true" ]; then \
+      apt-get update && apt-get install -y --no-install-recommends git ca-certificates && \
       npm ci --only=production --ignore-scripts && \
-      npm install --save-exact github:pedroslopez/whatsapp-web.js#main; \
+      npm install --save-exact git+https://github.com/pedroslopez/whatsapp-web.js.git#main && \
+      apt-get purge -y git ca-certificates && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*; \
     else \
       npm ci --only=production --ignore-scripts; \
     fi
@@ -34,9 +36,13 @@ RUN apt-get update && \
 
 # Copy only production dependencies from deps stage
 COPY --from=deps /usr/src/app/node_modules ./node_modules
+COPY --from=deps /usr/src/app/package*.json ./
 
 # Copy application code
-COPY . .
+COPY server.js ./
+COPY LICENSE ./
+COPY swagger.json ./
+COPY src/ ./src/
 
 EXPOSE 3000
 
