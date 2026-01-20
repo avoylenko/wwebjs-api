@@ -112,6 +112,14 @@ cd wwebjs-api
 npm install
 ```
 
+**Note:** To use the latest edge version of whatsapp-web.js directly from GitHub (with the latest features and fixes), modify the `package.json` dependency:
+
+```json
+"whatsapp-web.js": "github:pedroslopez/whatsapp-web.js#main"
+```
+
+Then run `npm install` again. Be aware that edge versions may contain unstable features.
+
 3. Copy the `.env.example` file to `.env` and update the required environment variables:
 
 ```bash
