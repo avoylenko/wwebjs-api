@@ -5,7 +5,7 @@ name: wwebjs-api
 
 services:
   api:
-    image: avoylenko/wwebjs-api:latest
+    build: .
     container_name: wwebjs-api
     restart: always
     ports:

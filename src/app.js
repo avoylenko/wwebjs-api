@@ -17,10 +17,14 @@ if (trustProxy) {
 app.use(express.json({ limit: maxAttachmentSize + 1000000 }))
 app.use(express.urlencoded({ limit: maxAttachmentSize + 1000000, extended: true }))
 
-app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
-  credentials: true
-}))
+// Debug logging middleware - prints request URL and body
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`)
+  if (req.body && Object.keys(req.body).length > 0) {
+    console.log('Request Body:', JSON.stringify(req.body, null, 2))
+  }
+  next()
+})
 
 // Mount routes with configurable base path
 app.use(basePath, routes)

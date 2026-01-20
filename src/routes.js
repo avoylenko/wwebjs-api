@@ -2,7 +2,7 @@ const express = require('express')
 const routes = express.Router()
 const swaggerUi = require('swagger-ui-express')
 const swaggerDocument = require('../swagger.json')
-const { enableLocalCallbackExample, enableSwaggerEndpoint } = require('./config')
+const { enableSwaggerEndpoint } = require('./config')
 
 const middleware = require('./middleware')
 const healthController = require('./controllers/healthController')
@@ -13,6 +13,7 @@ const groupChatController = require('./controllers/groupChatController')
 const messageController = require('./controllers/messageController')
 const contactController = require('./controllers/contactController')
 const channelController = require('./controllers/channelController')
+const webhookController = require('./controllers/webhookController')
 
 /**
  * ================
@@ -22,10 +23,6 @@ const channelController = require('./controllers/channelController')
 
 // API endpoint to check if server is alive
 routes.get('/ping', healthController.ping)
-// API basic callback
-if (enableLocalCallbackExample) {
-  routes.post('/localCallbackExample', [middleware.apikey, middleware.rateLimiter], healthController.localCallbackExample)
-}
 
 /**
  * ================
@@ -52,6 +49,23 @@ sessionRouter.get('/getPageScreenshot/:sessionId', middleware.sessionNameValidat
 
 /**
  * ================
+ * WEBHOOK ENDPOINTS
+ * ================
+ */
+
+const webhookRouter = express.Router()
+webhookRouter.use(middleware.apikey)
+routes.use('/webhook', webhookRouter)
+
+webhookRouter.get('/events', webhookController.getEventTypes)
+webhookRouter.get('/sessions', webhookController.getAllSessionWebhooks)
+webhookRouter.get('/session/:sessionId', middleware.sessionNameValidation, webhookController.getSessionWebhooksEndpoint)
+webhookRouter.post('/session/:sessionId', middleware.sessionNameValidation, webhookController.addSessionWebhook)
+webhookRouter.put('/session/:sessionId/:webhookId', middleware.sessionNameValidation, webhookController.updateSessionWebhook)
+webhookRouter.delete('/session/:sessionId/:webhookId', middleware.sessionNameValidation, webhookController.deleteSessionWebhook)
+
+/**
+ * ================
  * CLIENT ENDPOINTS
  * ================
  */
@@ -71,6 +85,7 @@ clientRouter.post('/getChatLabels/:sessionId', [middleware.sessionNameValidation
 clientRouter.get('/getChats/:sessionId', [middleware.sessionNameValidation, middleware.sessionValidation], clientController.getChats)
 clientRouter.post('/getChats/:sessionId', [middleware.sessionNameValidation, middleware.sessionValidation], clientController.getChatsWithSearch)
 clientRouter.post('/getChatsByLabelId/:sessionId', [middleware.sessionNameValidation, middleware.sessionValidation], clientController.getChatsByLabelId)
+clientRouter.get('/getGroups/:sessionId', [middleware.sessionNameValidation, middleware.sessionValidation], clientController.getGroups)
 clientRouter.post('/getCommonGroups/:sessionId', [middleware.sessionNameValidation, middleware.sessionValidation], clientController.getCommonGroups)
 clientRouter.post('/getContactById/:sessionId', [middleware.sessionNameValidation, middleware.sessionValidation], clientController.getContactById)
 clientRouter.get('/getContacts/:sessionId', [middleware.sessionNameValidation, middleware.sessionValidation], clientController.getContacts)

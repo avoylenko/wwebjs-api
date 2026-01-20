@@ -411,6 +411,57 @@ const getChatsWithSearch = async (req, res) => {
 }
 
 /**
+ * Retrieve all active groups for the given session ID.
+ * This function gets all chats and filters for groups that are not archived,
+ * effectively returning only groups the session is currently participating in.
+ *
+ * @function
+ * @async
+ *
+ * @param {Object} req - The request object.
+ * @param {string} req.params.sessionId - The session ID.
+ * @param {Object} res - The response object.
+ *
+ * @returns {Promise<void>} A Promise that resolves when the operation is complete.
+ *
+ * @throws {Error} If the operation fails, an error is thrown.
+ */
+const getGroups = async (req, res) => {
+  /*
+    #swagger.summary = 'Get all active groups'
+    #swagger.description = 'Get all groups that the session is currently participating in (excluding archived groups)'
+  */
+  try {
+    const client = sessions.get(req.params.sessionId)
+    const chats = await client.getChats()
+
+    // Get current user ID from client info
+    const currentUserId = client.info.wid._serialized
+
+    // Filter for groups that are not archived and user is still a participant
+    const groups = chats
+      .filter(chat => chat.isGroup && !chat.archived)
+      .filter(chat => {
+        // Check if current user is still a participant in the group
+        if (!chat.participants || chat.participants.length === 0) {
+          return false // Skip groups with no participants data
+        }
+        return chat.participants.some(participant =>
+          participant.id._serialized === currentUserId
+        )
+      })
+      .map(chat => ({
+        id: chat.id._serialized || chat.id,
+        name: chat.name
+      }))
+
+    res.json({ success: true, groups })
+  } catch (error) {
+    sendErrorResponse(res, 500, error.message)
+  }
+}
+
+/**
  * Returns the profile picture URL for a given contact ID.
  *
  * @async
@@ -2222,6 +2273,7 @@ module.exports = {
   getChats,
   getChatsWithSearch,
   getChatsByLabelId,
+  getGroups,
   getCommonGroups,
   getContactById,
   getContacts,
