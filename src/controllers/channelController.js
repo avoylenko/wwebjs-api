@@ -242,7 +242,7 @@ const sendSeen = async (req, res) => {
       sendErrorResponse(res, 400, 'The chat is not a channel')
       return
     }
-    const result = await chat.markSeen)
+    const result = await chat.markSeen()
     res.json({ success: true, result })
   } catch (error) {
     sendErrorResponse(res, 500, error.message)

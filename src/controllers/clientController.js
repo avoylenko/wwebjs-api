@@ -1339,7 +1339,7 @@ const sendSeen = async (req, res) => {
   try {
     const { chatId } = req.body
     const client = sessions.get(req.params.sessionId)
-    const result = await client.markSeenchatId)
+    const result = await client.markSeen(chatId)
     res.json({ success: true, result })
   } catch (error) {
     sendErrorResponse(res, 500, error.message)

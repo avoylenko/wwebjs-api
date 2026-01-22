@@ -55,7 +55,7 @@ const isEventEnabled = (event) => {
 const sendMessageSeenStatus = async (message) => {
   try {
     const chat = await message.getChat()
-    await chat.markSeen)
+    await chat.markSeen()
   } catch (error) {
     logger.error(error, 'Failed to send seen status')
   }
