@@ -69,8 +69,18 @@ const sendMessage = async (req, res) => {
     const sendOptions = { waitUntilMsgSent: true, ...options }
     const resolvedChatId = await resolveSendChatId(client, chatId)
 
+    // Backward compatibility: infer contentType when omitted.
+    // This matches the common pattern of sending media via:
+    // { chatId, content: { mimetype, data, filename }, ... } (no contentType).
+    const inferredContentType = (() => {
+      if (contentType) return contentType
+      if (typeof content === 'string') return 'string'
+      if (content && typeof content === 'object' && content.data && content.mimetype) return 'MessageMedia'
+      return undefined
+    })()
+
     let messageOut
-    switch (contentType) {
+    switch (inferredContentType) {
       case 'string':
         if (sendOptions?.media) {
           const { mimetype, data, filename = null, filesize = null } = normalizeBase64Media(sendOptions.media)
@@ -78,23 +88,26 @@ const sendMessage = async (req, res) => {
             return sendErrorResponse(res, 400, 'invalid media options')
           }
           sendOptions.media = new MessageMedia(mimetype, data, filename, filesize)
-          // Workaround: ensure chat model exists before sending media (prevents WA Web internal crashes)
-          await client.interface.openChatWindow(resolvedChatId)
+          // Preflight: ensure chat exists/loads before sending media
+          await client.getChatById(resolvedChatId)
         }
         messageOut = await client.sendMessage(resolvedChatId, content, sendOptions)
         break
       case 'MessageMediaFromURL': {
         const messageMediaFromURL = await MessageMedia.fromUrl(content, { unsafeMime: true, ...mediaFromURLOptions })
-        // Workaround: ensure chat model exists before sending media (prevents WA Web internal crashes)
-        await client.interface.openChatWindow(resolvedChatId)
+        // Preflight: ensure chat exists/loads before sending media
+        await client.getChatById(resolvedChatId)
         messageOut = await client.sendMessage(resolvedChatId, messageMediaFromURL, sendOptions)
         break
       }
       case 'MessageMedia': {
         const normalized = normalizeBase64Media(content)
+        if (!normalized?.mimetype || !normalized?.data) {
+          return sendErrorResponse(res, 400, 'invalid media content')
+        }
         const messageMedia = new MessageMedia(normalized.mimetype, normalized.data, normalized.filename, normalized.filesize)
-        // Workaround: ensure chat model exists before sending media (prevents WA Web internal crashes)
-        await client.interface.openChatWindow(resolvedChatId)
+        // Preflight: ensure chat exists/loads before sending media
+        await client.getChatById(resolvedChatId)
         messageOut = await client.sendMessage(resolvedChatId, messageMedia, sendOptions)
         break
       }
