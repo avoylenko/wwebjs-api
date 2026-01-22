@@ -1,6 +1,6 @@
 const { MessageMedia, Location, Poll } = require('whatsapp-web.js')
 const { sessions } = require('../sessions')
-const { sendErrorResponse, normalizeBase64Media, resolveSendChatId } = require('../utils')
+const { sendErrorResponse, normalizeBase64Media, resolveSendChatId, ensureChatExistsInStore } = require('../utils')
 
 /**
  * Send a message to a chat using the WhatsApp API
@@ -88,16 +88,29 @@ const sendMessage = async (req, res) => {
             return sendErrorResponse(res, 400, 'invalid media options')
           }
           sendOptions.media = new MessageMedia(mimetype, data, filename, filesize)
-          // Preflight: ensure chat exists/loads before sending media
-          await client.getChatById(resolvedChatId)
+          // Preflight: ensure chat exists in WA Web Store before sending media
+          const ensured = await ensureChatExistsInStore(client, resolvedChatId)
+          if (!ensured) return sendErrorResponse(res, 404, 'Chat not found')
         }
         messageOut = await client.sendMessage(resolvedChatId, content, sendOptions)
         break
       case 'MessageMediaFromURL': {
         const messageMediaFromURL = await MessageMedia.fromUrl(content, { unsafeMime: true, ...mediaFromURLOptions })
-        // Preflight: ensure chat exists/loads before sending media
-        await client.getChatById(resolvedChatId)
-        messageOut = await client.sendMessage(resolvedChatId, messageMediaFromURL, sendOptions)
+        // Preflight: ensure chat exists in WA Web Store before sending media
+        const ensured = await ensureChatExistsInStore(client, resolvedChatId)
+        if (!ensured) return sendErrorResponse(res, 404, 'Chat not found')
+        try {
+          messageOut = await client.sendMessage(resolvedChatId, messageMediaFromURL, sendOptions)
+        } catch (error) {
+          // Known WA Web crash: retry once without waiting for delivery
+          if ((error?.message || '').includes('markedUnread')) {
+            await ensureChatExistsInStore(client, resolvedChatId)
+            const retryOptions = { ...sendOptions, waitUntilMsgSent: false }
+            messageOut = await client.sendMessage(resolvedChatId, messageMediaFromURL, retryOptions)
+          } else {
+            throw error
+          }
+        }
         break
       }
       case 'MessageMedia': {
@@ -106,9 +119,21 @@ const sendMessage = async (req, res) => {
           return sendErrorResponse(res, 400, 'invalid media content')
         }
         const messageMedia = new MessageMedia(normalized.mimetype, normalized.data, normalized.filename, normalized.filesize)
-        // Preflight: ensure chat exists/loads before sending media
-        await client.getChatById(resolvedChatId)
-        messageOut = await client.sendMessage(resolvedChatId, messageMedia, sendOptions)
+        // Preflight: ensure chat exists in WA Web Store before sending media
+        const ensured = await ensureChatExistsInStore(client, resolvedChatId)
+        if (!ensured) return sendErrorResponse(res, 404, 'Chat not found')
+        try {
+          messageOut = await client.sendMessage(resolvedChatId, messageMedia, sendOptions)
+        } catch (error) {
+          // Known WA Web crash: retry once without waiting for delivery
+          if ((error?.message || '').includes('markedUnread')) {
+            await ensureChatExistsInStore(client, resolvedChatId)
+            const retryOptions = { ...sendOptions, waitUntilMsgSent: false }
+            messageOut = await client.sendMessage(resolvedChatId, messageMedia, retryOptions)
+          } else {
+            throw error
+          }
+        }
         break
       }
       case 'Location': {

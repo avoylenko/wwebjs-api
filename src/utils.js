@@ -134,6 +134,31 @@ const resolveSendChatId = async (client, chatId) => {
   return normalized
 }
 
+/**
+ * Ensure a chat model exists in WhatsApp Web's Store for the given chatId.
+ * This is more direct than client.getChatById() and helps avoid WA Web internal
+ * crashes where conversation model is undefined (e.g. "markedUnread" errors).
+ *
+ * @returns {Promise<string|null>} resolved chat id if found/created, otherwise null
+ */
+const ensureChatExistsInStore = async (client, chatId) => {
+  try {
+    await waitForNestedObject(client, 'pupPage')
+    if (client.pupPage.isClosed()) return null
+    const result = await client.pupPage.evaluate(async (chatId) => {
+      const Store = window.Store
+      if (!Store?.Chat) return null
+      const existing = Store.Chat.get(chatId)
+      const chat = existing || (Store.Chat.find ? await Store.Chat.find(chatId) : null)
+      if (!chat) return null
+      return chat.id?._serialized || chat.id || chatId
+    }, chatId)
+    return result || null
+  } catch (_) {
+    return null
+  }
+}
+
 const sleep = function (ms) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
@@ -229,6 +254,7 @@ module.exports = {
   normalizeChatId,
   normalizeBase64Media,
   resolveSendChatId,
+  ensureChatExistsInStore,
   sleep,
   exposeFunctionIfAbsent,
   patchWWebLibrary
