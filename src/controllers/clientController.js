@@ -1,6 +1,6 @@
 const { MessageMedia, Location, Poll } = require('whatsapp-web.js')
 const { sessions } = require('../sessions')
-const { sendErrorResponse } = require('../utils')
+const { sendErrorResponse, normalizeBase64Media, resolveSendChatId } = require('../utils')
 
 /**
  * Send a message to a chat using the WhatsApp API
@@ -67,43 +67,51 @@ const sendMessage = async (req, res) => {
     const { chatId, content, contentType, options = {}, mediaFromURLOptions = {} } = req.body
     const client = sessions.get(req.params.sessionId)
     const sendOptions = { waitUntilMsgSent: true, ...options }
+    const resolvedChatId = await resolveSendChatId(client, chatId)
 
     let messageOut
     switch (contentType) {
       case 'string':
         if (sendOptions?.media) {
-          const { mimetype, data, filename = null, filesize = null } = sendOptions.media
+          const { mimetype, data, filename = null, filesize = null } = normalizeBase64Media(sendOptions.media)
           if (!mimetype || !data) {
             return sendErrorResponse(res, 400, 'invalid media options')
           }
           sendOptions.media = new MessageMedia(mimetype, data, filename, filesize)
+          // Workaround: ensure chat model exists before sending media (prevents WA Web internal crashes)
+          await client.interface.openChatWindow(resolvedChatId)
         }
-        messageOut = await client.sendMessage(chatId, content, sendOptions)
+        messageOut = await client.sendMessage(resolvedChatId, content, sendOptions)
         break
       case 'MessageMediaFromURL': {
         const messageMediaFromURL = await MessageMedia.fromUrl(content, { unsafeMime: true, ...mediaFromURLOptions })
-        messageOut = await client.sendMessage(chatId, messageMediaFromURL, sendOptions)
+        // Workaround: ensure chat model exists before sending media (prevents WA Web internal crashes)
+        await client.interface.openChatWindow(resolvedChatId)
+        messageOut = await client.sendMessage(resolvedChatId, messageMediaFromURL, sendOptions)
         break
       }
       case 'MessageMedia': {
-        const messageMedia = new MessageMedia(content.mimetype, content.data, content.filename, content.filesize)
-        messageOut = await client.sendMessage(chatId, messageMedia, sendOptions)
+        const normalized = normalizeBase64Media(content)
+        const messageMedia = new MessageMedia(normalized.mimetype, normalized.data, normalized.filename, normalized.filesize)
+        // Workaround: ensure chat model exists before sending media (prevents WA Web internal crashes)
+        await client.interface.openChatWindow(resolvedChatId)
+        messageOut = await client.sendMessage(resolvedChatId, messageMedia, sendOptions)
         break
       }
       case 'Location': {
         const location = new Location(content.latitude, content.longitude, content.description)
-        messageOut = await client.sendMessage(chatId, location, sendOptions)
+        messageOut = await client.sendMessage(resolvedChatId, location, sendOptions)
         break
       }
       case 'Contact': {
         const contactId = content.contactId.endsWith('@c.us') ? content.contactId : `${content.contactId}@c.us`
         const contact = await client.getContactById(contactId)
-        messageOut = await client.sendMessage(chatId, contact, sendOptions)
+        messageOut = await client.sendMessage(resolvedChatId, contact, sendOptions)
         break
       }
       case 'Poll': {
         const poll = new Poll(content.pollName, content.pollOptions, content.options)
-        messageOut = await client.sendMessage(chatId, poll, sendOptions)
+        messageOut = await client.sendMessage(resolvedChatId, poll, sendOptions)
         break
       }
       default:

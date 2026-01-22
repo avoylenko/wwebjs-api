@@ -1,6 +1,6 @@
 const { MessageMedia } = require('whatsapp-web.js')
 const { sessions } = require('../sessions')
-const { sendErrorResponse } = require('../utils')
+const { sendErrorResponse, normalizeBase64Media } = require('../utils')
 
 /**
  * @function
@@ -128,7 +128,8 @@ const sendMessage = async (req, res) => {
         break
       }
       case 'MessageMedia': {
-        const messageMedia = new MessageMedia(content.mimetype, content.data, content.filename, content.filesize)
+        const normalized = normalizeBase64Media(content)
+        const messageMedia = new MessageMedia(normalized.mimetype, normalized.data, normalized.filename, normalized.filesize)
         messageOut = await chat.sendMessage(messageMedia, sendOptions)
         break
       }

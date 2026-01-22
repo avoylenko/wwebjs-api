@@ -69,6 +69,71 @@ const decodeBase64 = function * (base64String) {
   }
 }
 
+/**
+ * Normalize a chatId into a best-effort canonical form.
+ * - Trims whitespace
+ * - If given a plain phone number, appends '@c.us'
+ * - If given '+<digits>', strips non-digits and appends '@c.us'
+ */
+const normalizeChatId = (chatId) => {
+  if (typeof chatId !== 'string') return chatId
+  const trimmed = chatId.trim()
+  // Already a JID-like value (group/channel/broadcast/contact)
+  if (trimmed.includes('@')) return trimmed
+
+  // Treat as phone number
+  const digits = trimmed.replace(/[^\d]/g, '')
+  if (!digits) return trimmed
+  return `${digits}@c.us`
+}
+
+/**
+ * Normalize base64 payloads.
+ * - Accepts either raw base64 or a data-uri: "data:<mimetype>;base64,<data>"
+ * - Strips whitespace/newlines
+ */
+const normalizeBase64Media = ({ mimetype, data, filename = null, filesize = null } = {}) => {
+  if (typeof data !== 'string') {
+    return { mimetype, data, filename, filesize }
+  }
+
+  let nextMimetype = mimetype
+  let nextData = data.trim().replace(/\s+/g, '')
+
+  const dataUriMatch = nextData.match(/^data:([^;]+);base64,(.+)$/i)
+  if (dataUriMatch) {
+    nextMimetype = nextMimetype || dataUriMatch[1]
+    nextData = dataUriMatch[2]
+  }
+
+  return { mimetype: nextMimetype, data: nextData, filename, filesize }
+}
+
+/**
+ * Resolve a recipient id for sending messages.
+ * For contacts, uses getNumberId to canonicalize + validate registration.
+ * For other ids, returns normalized id as-is.
+ */
+const resolveSendChatId = async (client, chatId) => {
+  const normalized = normalizeChatId(chatId)
+  if (typeof normalized !== 'string') return normalized
+
+  // For contact JIDs, try to canonicalize/validate registration to avoid WA Web crashes.
+  if (normalized.endsWith('@c.us')) {
+    const number = normalized.slice(0, -'@c.us'.length)
+    try {
+      const numberId = await client.getNumberId(number)
+      if (!numberId || !numberId._serialized) return normalized
+      return numberId._serialized
+    } catch (_) {
+      // If getNumberId fails (e.g. transient), fall back to normalized input.
+      return normalized
+    }
+  }
+
+  return normalized
+}
+
 const sleep = function (ms) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
@@ -161,6 +226,9 @@ module.exports = {
   isEventEnabled,
   sendMessageSeenStatus,
   decodeBase64,
+  normalizeChatId,
+  normalizeBase64Media,
+  resolveSendChatId,
   sleep,
   exposeFunctionIfAbsent,
   patchWWebLibrary
