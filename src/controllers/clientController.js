@@ -118,26 +118,46 @@ const sendMessage = async (req, res) => {
         if (!normalized?.mimetype || !normalized?.data) {
           return sendErrorResponse(res, 400, 'invalid media content')
         }
-        const messageMedia = new MessageMedia(normalized.mimetype, normalized.data, normalized.filename, normalized.filesize)
+        // Basic base64 sanity check (avoid WA Web crashing on malformed payloads)
+        const base64Str = normalized.data
+        const base64Ok = typeof base64Str === 'string' &&
+          base64Str.length > 0 &&
+          base64Str.length % 4 === 0 &&
+          /^[A-Za-z0-9+/]+={0,2}$/.test(base64Str)
+        if (!base64Ok) {
+          return sendErrorResponse(res, 400, 'invalid base64 media data')
+        }
+
+        const isLikelyDocument = typeof normalized.mimetype === 'string' && normalized.mimetype.toLowerCase().startsWith('application/')
+        // Some WA Web builds appear to crash on certain "application/*" office mimetypes even when sending as document.
+        // Use a safer generic mimetype while still sending as a document.
+        const mt = normalized.mimetype.toLowerCase()
+        const isOfficeDoc =
+          mt.includes('officedocument') ||
+          mt.includes('msword') ||
+          mt.includes('excel') ||
+          mt.includes('powerpoint')
+        const safeMimetype = (isLikelyDocument && isOfficeDoc) ? 'application/octet-stream' : normalized.mimetype
+
+        const messageMedia = new MessageMedia(safeMimetype, normalized.data, normalized.filename, normalized.filesize)
         // Preflight: ensure chat exists in WA Web Store before sending media
         const ensured = await ensureChatExistsInStore(client, resolvedChatId)
+        const finalChatId = ensured || resolvedChatId
         if (!ensured) return sendErrorResponse(res, 404, 'Chat not found')
-        // WA tends to require explicit "document mode" for non-media application/* payloads.
-        // Without this, WhatsApp Web can hit internal crashes (e.g. markedUnread) on some versions.
-        const isLikelyDocument = typeof normalized.mimetype === 'string' && normalized.mimetype.toLowerCase().startsWith('application/')
+
         // Force document mode for application/* payloads and avoid WA's flaky "wait until sent" path for docs.
         // Note: put forced fields last so caller options can't override them.
         const normalizedSendOptions = isLikelyDocument
           ? { ...sendOptions, sendMediaAsDocument: true, waitUntilMsgSent: false }
           : sendOptions
         try {
-          messageOut = await client.sendMessage(resolvedChatId, messageMedia, normalizedSendOptions)
+          messageOut = await client.sendMessage(finalChatId, messageMedia, normalizedSendOptions)
         } catch (error) {
-          // Known WA Web crash: retry once without waiting for delivery
+          // Known WA Web crash: try an alternate send path that attaches media via options.media
           if ((error?.message || '').includes('markedUnread')) {
             await ensureChatExistsInStore(client, resolvedChatId)
-            const retryOptions = { ...normalizedSendOptions, waitUntilMsgSent: false }
-            messageOut = await client.sendMessage(resolvedChatId, messageMedia, retryOptions)
+            const retryOptions = { ...normalizedSendOptions, waitUntilMsgSent: false, media: messageMedia }
+            messageOut = await client.sendMessage(finalChatId, '', retryOptions)
           } else {
             throw error
           }
