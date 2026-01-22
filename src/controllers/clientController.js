@@ -151,13 +151,33 @@ const sendMessage = async (req, res) => {
           ? { ...sendOptions, sendMediaAsDocument: true, waitUntilMsgSent: false }
           : sendOptions
         try {
-          messageOut = await client.sendMessage(finalChatId, messageMedia, normalizedSendOptions)
+          if (isLikelyDocument) {
+            // Use Chat instance send path for documents (different WA Web internal pipeline)
+            const chat = await client.getChatById(finalChatId)
+            if (!chat) return sendErrorResponse(res, 404, 'Chat not found')
+            messageOut = await chat.sendMessage(messageMedia, normalizedSendOptions)
+          } else {
+            messageOut = await client.sendMessage(finalChatId, messageMedia, normalizedSendOptions)
+          }
         } catch (error) {
           // Known WA Web crash: try an alternate send path that attaches media via options.media
           if ((error?.message || '').includes('markedUnread')) {
             await ensureChatExistsInStore(client, resolvedChatId)
             const retryOptions = { ...normalizedSendOptions, waitUntilMsgSent: false, media: messageMedia }
-            messageOut = await client.sendMessage(finalChatId, '', retryOptions)
+            try {
+              // Alternate path 1: Chat.sendMessage with media in options
+              const chat = await client.getChatById(finalChatId)
+              if (!chat) return sendErrorResponse(res, 404, 'Chat not found')
+              messageOut = await chat.sendMessage('', retryOptions)
+            } catch (err2) {
+              // Alternate path 2 (last resort): open chat UI then try again
+              try {
+                await client.interface.openChatWindow(finalChatId)
+              } catch (_) {}
+              const chat = await client.getChatById(finalChatId)
+              if (!chat) return sendErrorResponse(res, 404, 'Chat not found')
+              messageOut = await chat.sendMessage('', retryOptions)
+            }
           } else {
             throw error
           }
@@ -1319,7 +1339,7 @@ const sendSeen = async (req, res) => {
   try {
     const { chatId } = req.body
     const client = sessions.get(req.params.sessionId)
-    const result = await client.sendSeen(chatId)
+    const result = await client.markSeenchatId)
     res.json({ success: true, result })
   } catch (error) {
     sendErrorResponse(res, 500, error.message)

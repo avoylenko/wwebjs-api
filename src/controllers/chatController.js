@@ -298,7 +298,7 @@ const sendSeen = async (req, res) => {
       sendErrorResponse(res, 404, 'Chat not Found')
       return
     }
-    const result = await chat.sendSeen()
+    const result = await chat.markSeen)
     res.json({ success: true, result })
   } catch (error) {
     sendErrorResponse(res, 500, error.message)
