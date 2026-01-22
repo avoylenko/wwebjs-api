@@ -122,13 +122,21 @@ const sendMessage = async (req, res) => {
         // Preflight: ensure chat exists in WA Web Store before sending media
         const ensured = await ensureChatExistsInStore(client, resolvedChatId)
         if (!ensured) return sendErrorResponse(res, 404, 'Chat not found')
+        // WA tends to require explicit "document mode" for non-media application/* payloads.
+        // Without this, WhatsApp Web can hit internal crashes (e.g. markedUnread) on some versions.
+        const isLikelyDocument = typeof normalized.mimetype === 'string' && normalized.mimetype.toLowerCase().startsWith('application/')
+        // Force document mode for application/* payloads and avoid WA's flaky "wait until sent" path for docs.
+        // Note: put forced fields last so caller options can't override them.
+        const normalizedSendOptions = isLikelyDocument
+          ? { ...sendOptions, sendMediaAsDocument: true, waitUntilMsgSent: false }
+          : sendOptions
         try {
-          messageOut = await client.sendMessage(resolvedChatId, messageMedia, sendOptions)
+          messageOut = await client.sendMessage(resolvedChatId, messageMedia, normalizedSendOptions)
         } catch (error) {
           // Known WA Web crash: retry once without waiting for delivery
           if ((error?.message || '').includes('markedUnread')) {
             await ensureChatExistsInStore(client, resolvedChatId)
-            const retryOptions = { ...sendOptions, waitUntilMsgSent: false }
+            const retryOptions = { ...normalizedSendOptions, waitUntilMsgSent: false }
             messageOut = await client.sendMessage(resolvedChatId, messageMedia, retryOptions)
           } else {
             throw error
