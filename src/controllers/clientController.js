@@ -1,6 +1,6 @@
 const { MessageMedia, Location, Poll } = require('whatsapp-web.js')
 const { sessions } = require('../sessions')
-const { sendErrorResponse, normalizeBase64Media, resolveSendChatId, ensureChatExistsInStore } = require('../utils')
+const { sendErrorResponse } = require('../utils')
 
 /**
  * Send a message to a chat using the WhatsApp API
@@ -67,137 +67,43 @@ const sendMessage = async (req, res) => {
     const { chatId, content, contentType, options = {}, mediaFromURLOptions = {} } = req.body
     const client = sessions.get(req.params.sessionId)
     const sendOptions = { waitUntilMsgSent: true, ...options }
-    const resolvedChatId = await resolveSendChatId(client, chatId)
-
-    // Backward compatibility: infer contentType when omitted.
-    // This matches the common pattern of sending media via:
-    // { chatId, content: { mimetype, data, filename }, ... } (no contentType).
-    const inferredContentType = (() => {
-      if (contentType) return contentType
-      if (typeof content === 'string') return 'string'
-      if (content && typeof content === 'object' && content.data && content.mimetype) return 'MessageMedia'
-      return undefined
-    })()
 
     let messageOut
-    switch (inferredContentType) {
+    switch (contentType) {
       case 'string':
         if (sendOptions?.media) {
-          const { mimetype, data, filename = null, filesize = null } = normalizeBase64Media(sendOptions.media)
+          const { mimetype, data, filename = null, filesize = null } = sendOptions.media
           if (!mimetype || !data) {
             return sendErrorResponse(res, 400, 'invalid media options')
           }
           sendOptions.media = new MessageMedia(mimetype, data, filename, filesize)
-          // Preflight: ensure chat exists in WA Web Store before sending media
-          const ensured = await ensureChatExistsInStore(client, resolvedChatId)
-          if (!ensured) return sendErrorResponse(res, 404, 'Chat not found')
         }
-        messageOut = await client.sendMessage(resolvedChatId, content, sendOptions)
+        messageOut = await client.sendMessage(chatId, content, sendOptions)
         break
       case 'MessageMediaFromURL': {
         const messageMediaFromURL = await MessageMedia.fromUrl(content, { unsafeMime: true, ...mediaFromURLOptions })
-        // Preflight: ensure chat exists in WA Web Store before sending media
-        const ensured = await ensureChatExistsInStore(client, resolvedChatId)
-        if (!ensured) return sendErrorResponse(res, 404, 'Chat not found')
-        try {
-          messageOut = await client.sendMessage(resolvedChatId, messageMediaFromURL, sendOptions)
-        } catch (error) {
-          // Known WA Web crash: retry once without waiting for delivery
-          if ((error?.message || '').includes('markedUnread')) {
-            await ensureChatExistsInStore(client, resolvedChatId)
-            const retryOptions = { ...sendOptions, waitUntilMsgSent: false }
-            messageOut = await client.sendMessage(resolvedChatId, messageMediaFromURL, retryOptions)
-          } else {
-            throw error
-          }
-        }
+        messageOut = await client.sendMessage(chatId, messageMediaFromURL, sendOptions)
         break
       }
       case 'MessageMedia': {
-        const normalized = normalizeBase64Media(content)
-        if (!normalized?.mimetype || !normalized?.data) {
-          return sendErrorResponse(res, 400, 'invalid media content')
-        }
-        // Basic base64 sanity check (avoid WA Web crashing on malformed payloads)
-        const base64Str = normalized.data
-        const base64Ok = typeof base64Str === 'string' &&
-          base64Str.length > 0 &&
-          base64Str.length % 4 === 0 &&
-          /^[A-Za-z0-9+/]+={0,2}$/.test(base64Str)
-        if (!base64Ok) {
-          return sendErrorResponse(res, 400, 'invalid base64 media data')
-        }
-
-        const isLikelyDocument = typeof normalized.mimetype === 'string' && normalized.mimetype.toLowerCase().startsWith('application/')
-        // Some WA Web builds appear to crash on certain "application/*" office mimetypes even when sending as document.
-        // Use a safer generic mimetype while still sending as a document.
-        const mt = normalized.mimetype.toLowerCase()
-        const isOfficeDoc =
-          mt.includes('officedocument') ||
-          mt.includes('msword') ||
-          mt.includes('excel') ||
-          mt.includes('powerpoint')
-        const safeMimetype = (isLikelyDocument && isOfficeDoc) ? 'application/octet-stream' : normalized.mimetype
-
-        const messageMedia = new MessageMedia(safeMimetype, normalized.data, normalized.filename, normalized.filesize)
-        // Preflight: ensure chat exists in WA Web Store before sending media
-        const ensured = await ensureChatExistsInStore(client, resolvedChatId)
-        const finalChatId = ensured || resolvedChatId
-        if (!ensured) return sendErrorResponse(res, 404, 'Chat not found')
-
-        // Force document mode for application/* payloads and avoid WA's flaky "wait until sent" path for docs.
-        // Note: put forced fields last so caller options can't override them.
-        const normalizedSendOptions = isLikelyDocument
-          ? { ...sendOptions, sendMediaAsDocument: true, waitUntilMsgSent: false }
-          : sendOptions
-        try {
-          if (isLikelyDocument) {
-            // Use Chat instance send path for documents (different WA Web internal pipeline)
-            const chat = await client.getChatById(finalChatId)
-            if (!chat) return sendErrorResponse(res, 404, 'Chat not found')
-            messageOut = await chat.sendMessage(messageMedia, normalizedSendOptions)
-          } else {
-            messageOut = await client.sendMessage(finalChatId, messageMedia, normalizedSendOptions)
-          }
-        } catch (error) {
-          // Known WA Web crash: try an alternate send path that attaches media via options.media
-          if ((error?.message || '').includes('markedUnread')) {
-            await ensureChatExistsInStore(client, resolvedChatId)
-            const retryOptions = { ...normalizedSendOptions, waitUntilMsgSent: false, media: messageMedia }
-            try {
-              // Alternate path 1: Chat.sendMessage with media in options
-              const chat = await client.getChatById(finalChatId)
-              if (!chat) return sendErrorResponse(res, 404, 'Chat not found')
-              messageOut = await chat.sendMessage('', retryOptions)
-            } catch (err2) {
-              // Alternate path 2 (last resort): open chat UI then try again
-              try {
-                await client.interface.openChatWindow(finalChatId)
-              } catch (_) {}
-              const chat = await client.getChatById(finalChatId)
-              if (!chat) return sendErrorResponse(res, 404, 'Chat not found')
-              messageOut = await chat.sendMessage('', retryOptions)
-            }
-          } else {
-            throw error
-          }
-        }
+        const messageMedia = new MessageMedia(content.mimetype, content.data, content.filename, content.filesize)
+        messageOut = await client.sendMessage(chatId, messageMedia, sendOptions)
         break
       }
       case 'Location': {
         const location = new Location(content.latitude, content.longitude, content.description)
-        messageOut = await client.sendMessage(resolvedChatId, location, sendOptions)
+        messageOut = await client.sendMessage(chatId, location, sendOptions)
         break
       }
       case 'Contact': {
         const contactId = content.contactId.endsWith('@c.us') ? content.contactId : `${content.contactId}@c.us`
         const contact = await client.getContactById(contactId)
-        messageOut = await client.sendMessage(resolvedChatId, contact, sendOptions)
+        messageOut = await client.sendMessage(chatId, contact, sendOptions)
         break
       }
       case 'Poll': {
         const poll = new Poll(content.pollName, content.pollOptions, content.options)
-        messageOut = await client.sendMessage(resolvedChatId, poll, sendOptions)
+        messageOut = await client.sendMessage(chatId, poll, sendOptions)
         break
       }
       default:
@@ -499,57 +405,6 @@ const getChatsWithSearch = async (req, res) => {
     const client = sessions.get(req.params.sessionId)
     const chats = await client.getChats(searchOptions)
     res.json({ success: true, chats })
-  } catch (error) {
-    sendErrorResponse(res, 500, error.message)
-  }
-}
-
-/**
- * Retrieve all active groups for the given session ID.
- * This function gets all chats and filters for groups that are not archived,
- * effectively returning only groups the session is currently participating in.
- *
- * @function
- * @async
- *
- * @param {Object} req - The request object.
- * @param {string} req.params.sessionId - The session ID.
- * @param {Object} res - The response object.
- *
- * @returns {Promise<void>} A Promise that resolves when the operation is complete.
- *
- * @throws {Error} If the operation fails, an error is thrown.
- */
-const getGroups = async (req, res) => {
-  /*
-    #swagger.summary = 'Get all active groups'
-    #swagger.description = 'Get all groups that the session is currently participating in (excluding archived groups)'
-  */
-  try {
-    const client = sessions.get(req.params.sessionId)
-    const chats = await client.getChats()
-
-    // Get current user ID from client info
-    const currentUserId = client.info.wid._serialized
-
-    // Filter for groups that are not archived and user is still a participant
-    const groups = chats
-      .filter(chat => chat.isGroup && !chat.archived)
-      .filter(chat => {
-        // Check if current user is still a participant in the group
-        if (!chat.participants || chat.participants.length === 0) {
-          return false // Skip groups with no participants data
-        }
-        return chat.participants.some(participant =>
-          participant.id._serialized === currentUserId
-        )
-      })
-      .map(chat => ({
-        id: chat.id._serialized || chat.id,
-        name: chat.name
-      }))
-
-    res.json({ success: true, groups })
   } catch (error) {
     sendErrorResponse(res, 500, error.message)
   }
@@ -1339,7 +1194,7 @@ const sendSeen = async (req, res) => {
   try {
     const { chatId } = req.body
     const client = sessions.get(req.params.sessionId)
-    const result = await client.markSeen(chatId)
+    const result = await client.sendSeen(chatId)
     res.json({ success: true, result })
   } catch (error) {
     sendErrorResponse(res, 500, error.message)
@@ -2367,7 +2222,6 @@ module.exports = {
   getChats,
   getChatsWithSearch,
   getChatsByLabelId,
-  getGroups,
   getCommonGroups,
   getContactById,
   getContacts,

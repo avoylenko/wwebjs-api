@@ -1,6 +1,6 @@
 const { MessageMedia } = require('whatsapp-web.js')
 const { sessions } = require('../sessions')
-const { sendErrorResponse, normalizeBase64Media } = require('../utils')
+const { sendErrorResponse } = require('../utils')
 
 /**
  * @function
@@ -128,8 +128,7 @@ const sendMessage = async (req, res) => {
         break
       }
       case 'MessageMedia': {
-        const normalized = normalizeBase64Media(content)
-        const messageMedia = new MessageMedia(normalized.mimetype, normalized.data, normalized.filename, normalized.filesize)
+        const messageMedia = new MessageMedia(content.mimetype, content.data, content.filename, content.filesize)
         messageOut = await chat.sendMessage(messageMedia, sendOptions)
         break
       }
@@ -242,7 +241,7 @@ const sendSeen = async (req, res) => {
       sendErrorResponse(res, 400, 'The chat is not a channel')
       return
     }
-    const result = await chat.markSeen()
+    const result = await chat.sendSeen()
     res.json({ success: true, result })
   } catch (error) {
     sendErrorResponse(res, 500, error.message)
@@ -934,14 +933,14 @@ const setProfilePicture = async (req, res) => {
       return
     }
     let messageMedia =
-      newProfilePictureUrl &&
-      (await MessageMedia.fromUrl(newProfilePictureUrl, { unsafeMime: true }))
+        newProfilePictureUrl &&
+        (await MessageMedia.fromUrl(newProfilePictureUrl, { unsafeMime: true }))
     if (newProfilePictureMedia?.data) {
       messageMedia = new MessageMedia(
-        newProfilePictureMedia.mimetype,
-        newProfilePictureMedia.data,
-        null,
-        null
+          newProfilePictureMedia.mimetype,
+          newProfilePictureMedia.data,
+          null,
+          null
       )
     }
     const result = await chat.setProfilePicture(messageMedia)
