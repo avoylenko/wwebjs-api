@@ -80,6 +80,11 @@ const doc = {
     GetSessionsResponse: {
       success: true,
       result: ['session1', 'session2']
+    },
+    ChatId: {
+      server: 'c.us | g.us',
+      user: '1234567890',
+      _serialized: '1234567890@c.us',
     }
   }
 }
