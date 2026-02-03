@@ -97,6 +97,11 @@ const doc = {
       isMuted: false,
       muteExpiration: 0,
       // Add other chat properties as needed after create definitions
+    },
+    GetChatsResponse: {
+      success: true,
+      chats: [ { $ref: '#/definitions/Chat' } ],
+      error: 'error message if any',
     }
   }
 }

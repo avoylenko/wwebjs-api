@@ -348,8 +348,16 @@ const getContacts = async (req, res) => {
  * @throws {Error} If the operation fails, an error is thrown.
  */
 const getChats = async (req, res) => {
-  /*
-    #swagger.summary = 'Get all current chats'
+  /*  #swagger.summary = 'Get all current chats'
+    #swagger.description = 'Retrieve all chats for the given session ID.'
+    #swagger.responses[200] = {
+      description: 'Retrieved all chats.',
+      content: {
+        'application/json': {
+          schema: { "$ref": "#/definitions/GetChatsResponse" }
+        }
+      } 
+    }
   */
   try {
     const client = sessions.get(req.params.sessionId)
@@ -377,6 +385,7 @@ const getChats = async (req, res) => {
 const getChatsWithSearch = async (req, res) => {
   /*
     #swagger.summary = 'Get all current chats with optional search parameters'
+    #swagger.description = 'Retrieve all chats for the given session ID with optional search parameters.'
     #swagger.requestBody = {
       required: true,
       schema: {
@@ -398,6 +407,14 @@ const getChatsWithSearch = async (req, res) => {
           }
         }
       },
+    }
+    #swagger.responses[200] = {
+      description: 'Retrieved all chats with search parameters.',
+      content: {
+        'application/json': {
+          schema:  {"$ref": "#/definitions/GetChatsResponse"}
+        }
+      }
     }
   */
   try {
