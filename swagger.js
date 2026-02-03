@@ -85,6 +85,18 @@ const doc = {
       server: 'c.us | g.us',
       user: '1234567890',
       _serialized: '1234567890@c.us',
+    },
+    Chat: {
+      id: { $ref: '#/definitions/ChatId' },
+      name: 'John Doe',
+      isGroup: false, 
+      unreadCount: 0,
+      timestamp: 1770140061,
+      archived: false,
+      pinned: false,
+      isMuted: false,
+      muteExpiration: 0,
+      // Add other chat properties as needed after create definitions
     }
   }
 }
