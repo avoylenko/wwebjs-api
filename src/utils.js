@@ -98,6 +98,9 @@ const patchWWebLibrary = async (client) => {
         if (searchOptions && searchOptions.since !== undefined && Number.isFinite(searchOptions.since) && m.t < searchOptions.since) {
           return false
         }
+        if (searchOptions && searchOptions.messageId !== undefined && m.id.id != searchOptions.messageId) {
+          return false
+        }
         return true
       }
 
