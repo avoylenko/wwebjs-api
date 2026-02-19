@@ -39,6 +39,7 @@ routes.use('/session', sessionRouter)
 
 sessionRouter.get('/getSessions', sessionController.getSessions)
 sessionRouter.get('/start/:sessionId', middleware.sessionNameValidation, sessionController.startSession)
+sessionRouter.post('/start/:sessionId', middleware.sessionNameValidation, sessionController.startSession)
 sessionRouter.get('/stop/:sessionId', middleware.sessionNameValidation, sessionController.stopSession)
 sessionRouter.get('/status/:sessionId', middleware.sessionNameValidation, sessionController.statusSession)
 sessionRouter.get('/qr/:sessionId', middleware.sessionNameValidation, sessionController.sessionQrCode)
@@ -49,6 +50,8 @@ sessionRouter.get('/terminate/:sessionId', middleware.sessionNameValidation, ses
 sessionRouter.get('/terminateInactive', sessionController.terminateInactiveSessions)
 sessionRouter.get('/terminateAll', sessionController.terminateAllSessions)
 sessionRouter.get('/getPageScreenshot/:sessionId', middleware.sessionNameValidation, sessionController.getPageScreenshot)
+sessionRouter.put('/setWebhook/:sessionId', middleware.sessionNameValidation, sessionController.setWebhook)
+sessionRouter.get('/getWebhook/:sessionId', middleware.sessionNameValidation, sessionController.getWebhook)
 
 /**
  * ================
