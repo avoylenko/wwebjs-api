@@ -1541,7 +1541,7 @@
           "Client"
         ],
         "summary": "Get all current chats",
-        "description": "",
+        "description": "Retrieve all chats for the given session ID.",
         "parameters": [
           {
             "name": "sessionId",
@@ -1556,7 +1556,14 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "Retrieved all chats.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetChatsResponse"
+                }
+              }
+            }
           },
           "403": {
             "description": "Forbidden.",
@@ -1610,7 +1617,7 @@
           "Client"
         ],
         "summary": "Get all current chats with optional search parameters",
-        "description": "",
+        "description": "Retrieve all chats for the given session ID with optional search parameters.",
         "parameters": [
           {
             "name": "sessionId",
@@ -1625,7 +1632,14 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "Retrieved all chats with search parameters.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetChatsResponse"
+                }
+              }
+            }
           },
           "403": {
             "description": "Forbidden.",
@@ -15070,6 +15084,97 @@
         },
         "xml": {
           "name": "GetSessionsResponse"
+        }
+      },
+      "ChatId": {
+        "type": "object",
+        "properties": {
+          "server": {
+            "type": "string",
+            "example": "c.us | g.us"
+          },
+          "user": {
+            "type": "string",
+            "example": "1234567890"
+          },
+          "_serialized": {
+            "type": "string",
+            "example": "1234567890@c.us"
+          }
+        },
+        "xml": {
+          "name": "ChatId"
+        }
+      },
+      "Chat": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "xml": {
+              "name": "chatid"
+            },
+            "$ref": "#/components/schemas/ChatId"
+          },
+          "name": {
+            "type": "string",
+            "example": "John Doe"
+          },
+          "isGroup": {
+            "type": "boolean",
+            "example": false
+          },
+          "unreadCount": {
+            "type": "number",
+            "example": 0
+          },
+          "timestamp": {
+            "type": "number",
+            "example": 1770140061
+          },
+          "archived": {
+            "type": "boolean",
+            "example": false
+          },
+          "pinned": {
+            "type": "boolean",
+            "example": false
+          },
+          "isMuted": {
+            "type": "boolean",
+            "example": false
+          },
+          "muteExpiration": {
+            "type": "number",
+            "example": 0
+          }
+        },
+        "xml": {
+          "name": "Chat"
+        }
+      },
+      "GetChatsResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "chats": {
+            "type": "array",
+            "items": {
+              "xml": {
+                "name": "chat"
+              },
+              "$ref": "#/components/schemas/Chat"
+            }
+          },
+          "error": {
+            "type": "string",
+            "example": "error message if any"
+          }
+        },
+        "xml": {
+          "name": "GetChatsResponse"
         }
       }
     },
