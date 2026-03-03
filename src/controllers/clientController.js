@@ -893,7 +893,7 @@ const getLabels = async (req, res) => {
     #swagger.summary = 'Get all current labels'
     #swagger.description = 'Retrieve all labels for the given session ID.'
     #swagger.responses[200] = {
-      description: 'Retrieved all chats.',
+      description: 'Retrieved all labels.',
       content: {
         'application/json': {
           schema: { "$ref": "#/definitions/GetAllLabelsResponse" }
