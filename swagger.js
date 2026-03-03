@@ -110,6 +110,10 @@ const doc = {
     GetAllLabelsResponse: {
       success: true,
       labels: [ { $ref: '#/definitions/Label' } ],
+    },
+    GetLabelByIdResponse: {
+      success: true,
+      label: { $ref: '#/definitions/Label' },
     }
   }
 }

@@ -2235,7 +2235,14 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "Retrieved the label.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetLabelByIdResponse"
+                }
+              }
+            }
           },
           "403": {
             "description": "Forbidden.",
@@ -15226,6 +15233,24 @@
         },
         "xml": {
           "name": "GetAllLabelsResponse"
+        }
+      },
+      "GetLabelByIdResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "label": {
+            "xml": {
+              "name": "label"
+            },
+            "$ref": "#/components/schemas/Label"
+          }
+        },
+        "xml": {
+          "name": "GetLabelByIdResponse"
         }
       }
     },

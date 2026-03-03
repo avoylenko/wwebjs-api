@@ -859,6 +859,14 @@ const getLabelById = async (req, res) => {
         }
       },
     }
+    #swagger.responses[200] = {
+      description: 'Retrieved the label.',
+      content: {
+        'application/json': {
+          schema: { "$ref": "#/definitions/GetLabelByIdResponse" }
+        }
+      } 
+    }
   */
   try {
     const { labelId } = req.body
