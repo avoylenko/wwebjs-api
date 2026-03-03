@@ -2128,7 +2128,14 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "Retrieved all chats.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAllLabelsResponse"
+                }
+              }
+            }
           },
           "403": {
             "description": "Forbidden.",
@@ -2313,7 +2320,7 @@
           "Client"
         ],
         "summary": "Get all current labels",
-        "description": "",
+        "description": "Retrieve all labels for the given session ID.",
         "parameters": [
           {
             "name": "sessionId",
@@ -2328,7 +2335,14 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "Retrieved all chats.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAllLabelsResponse"
+                }
+              }
+            }
           },
           "403": {
             "description": "Forbidden.",
@@ -15175,6 +15189,43 @@
         },
         "xml": {
           "name": "GetChatsResponse"
+        }
+      },
+      "Label": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "1"
+          },
+          "name": {
+            "type": "string",
+            "example": "Not Read"
+          }
+        },
+        "xml": {
+          "name": "Label"
+        }
+      },
+      "GetAllLabelsResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "xml": {
+                "name": "label"
+              },
+              "$ref": "#/components/schemas/Label"
+            }
+          }
+        },
+        "xml": {
+          "name": "GetAllLabelsResponse"
         }
       }
     },

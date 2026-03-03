@@ -883,6 +883,15 @@ const getLabelById = async (req, res) => {
 const getLabels = async (req, res) => {
   /*
     #swagger.summary = 'Get all current labels'
+    #swagger.description = 'Retrieve all labels for the given session ID.'
+    #swagger.responses[200] = {
+      description: 'Retrieved all chats.',
+      content: {
+        'application/json': {
+          schema: { "$ref": "#/definitions/GetAllLabelsResponse" }
+        }
+      } 
+    }
   */
   try {
     const client = sessions.get(req.params.sessionId)

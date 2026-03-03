@@ -102,6 +102,14 @@ const doc = {
       success: true,
       chats: [ { $ref: '#/definitions/Chat' } ],
       error: 'error message if any',
+    },
+    Label: {
+      id: '1',
+      name: 'Not Read',
+    },
+    GetAllLabelsResponse: {
+      success: true,
+      labels: [ { $ref: '#/definitions/Label' } ],
     }
   }
 }
