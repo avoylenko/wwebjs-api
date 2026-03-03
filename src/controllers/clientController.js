@@ -665,6 +665,14 @@ const getChatLabels = async (req, res) => {
         }
       },
     }
+    #swagger.responses[200] = {
+    description: 'Retrieved all labels for the chat.',
+    content: {
+      'application/json': {
+        schema: { "$ref": "#/definitions/GetChatLabelsResponse" }
+      }
+    } 
+  }
   */
   try {
     const { chatId } = req.body
@@ -703,6 +711,14 @@ const getChatsByLabelId = async (req, res) => {
           },
         }
       },
+    }
+    #swagger.responses[200] = {
+      description: 'Retrieved all chats.',
+      content: {
+        'application/json': {
+          schema: { "$ref": "#/definitions/GetChatsResponse" }
+        }
+      } 
     }
   */
   try {
@@ -863,7 +879,7 @@ const getLabelById = async (req, res) => {
       description: 'Retrieved the label.',
       content: {
         'application/json': {
-          schema: { "$ref": "#/definitions/GetLabelByIdResponse" }
+          schema: { "$ref": "#/definitions/GetLabelResponse" }
         }
       } 
     }
@@ -896,7 +912,7 @@ const getLabels = async (req, res) => {
       description: 'Retrieved all labels.',
       content: {
         'application/json': {
-          schema: { "$ref": "#/definitions/GetAllLabelsResponse" }
+          schema: { "$ref": "#/definitions/GetLabelsResponse" }
         }
       } 
     }
@@ -939,6 +955,14 @@ const addOrRemoveLabels = async (req, res) => {
         },
       }
     },
+  }
+  #swagger.responses[200] = {
+    description: 'Labels changed successfully.',
+    content: {
+      'application/json': {
+        schema: { "$ref": "#/definitions/SuccessResponse" }
+      }
+    } 
   }
   */
   try {

@@ -1,3 +1,5 @@
+const { getChatLabels } = require('./src/controllers/clientController')
+
 const swaggerAutogen = require('swagger-autogen')({ openapi: '3.0.0', autoBody: false })
 
 const outputFile = './swagger.json'
@@ -81,6 +83,9 @@ const doc = {
       success: true,
       result: ['session1', 'session2']
     },
+    SuccessResponse: {
+      success: true,
+    },
     ChatId: {
       server: 'c.us | g.us',
       user: '1234567890',
@@ -107,13 +112,17 @@ const doc = {
       id: '1',
       name: 'Not Read',
     },
-    GetAllLabelsResponse: {
+    GetLabelResponse: {
+      success: true,
+      label: { $ref: '#/definitions/Label' },
+    },
+    GetLabelsResponse: {
       success: true,
       labels: [ { $ref: '#/definitions/Label' } ],
     },
-    GetLabelByIdResponse: {
+    GetChatLabelsResponse: {
       success: true,
-      label: { $ref: '#/definitions/Label' },
+      chatLabels: [ { $ref: '#/definitions/Label' } ],
     }
   }
 }

@@ -1456,7 +1456,14 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "Retrieved all labels for the chat.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetChatLabelsResponse"
+                }
+              }
+            }
           },
           "403": {
             "description": "Forbidden.",
@@ -1757,7 +1764,14 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "Retrieved all chats.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetChatsResponse"
+                }
+              }
+            }
           },
           "403": {
             "description": "Forbidden.",
@@ -2128,11 +2142,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Retrieved all chats.",
+            "description": "Labels changed successfully.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/GetAllLabelsResponse"
+                  "$ref": "#/components/schemas/SuccessResponse"
                 }
               }
             }
@@ -2239,7 +2253,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/GetLabelByIdResponse"
+                  "$ref": "#/components/schemas/GetLabelResponse"
                 }
               }
             }
@@ -2342,11 +2356,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Retrieved all chats.",
+            "description": "Retrieved all labels.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/GetAllLabelsResponse"
+                  "$ref": "#/components/schemas/GetLabelsResponse"
                 }
               }
             }
@@ -2420,7 +2434,14 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "Labels changed successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
           },
           "403": {
             "description": "Forbidden.",
@@ -15107,6 +15128,18 @@
           "name": "GetSessionsResponse"
         }
       },
+      "SuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          }
+        },
+        "xml": {
+          "name": "SuccessResponse"
+        }
+      },
       "ChatId": {
         "type": "object",
         "properties": {
@@ -15214,7 +15247,25 @@
           "name": "Label"
         }
       },
-      "GetAllLabelsResponse": {
+      "GetLabelResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "label": {
+            "xml": {
+              "name": "label"
+            },
+            "$ref": "#/components/schemas/Label"
+          }
+        },
+        "xml": {
+          "name": "GetLabelResponse"
+        }
+      },
+      "GetLabelsResponse": {
         "type": "object",
         "properties": {
           "success": {
@@ -15232,25 +15283,28 @@
           }
         },
         "xml": {
-          "name": "GetAllLabelsResponse"
+          "name": "GetLabelsResponse"
         }
       },
-      "GetLabelByIdResponse": {
+      "GetChatLabelsResponse": {
         "type": "object",
         "properties": {
           "success": {
             "type": "boolean",
             "example": true
           },
-          "label": {
-            "xml": {
-              "name": "label"
-            },
-            "$ref": "#/components/schemas/Label"
+          "chatLabels": {
+            "type": "array",
+            "items": {
+              "xml": {
+                "name": "label"
+              },
+              "$ref": "#/components/schemas/Label"
+            }
           }
         },
         "xml": {
-          "name": "GetLabelByIdResponse"
+          "name": "GetChatLabelsResponse"
         }
       }
     },
