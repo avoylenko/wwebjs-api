@@ -201,6 +201,7 @@ messageRouter.post('/getReactions/:sessionId', [middleware.sessionNameValidation
 messageRouter.post('/getGroupMentions/:sessionId', [middleware.sessionNameValidation, middleware.sessionValidation], messageController.getGroupMentions)
 messageRouter.post('/edit/:sessionId', [middleware.sessionNameValidation, middleware.sessionValidation], messageController.edit)
 messageRouter.post('/getContact/:sessionId', [middleware.sessionNameValidation, middleware.sessionValidation], messageController.getContact)
+messageRouter.post('/getPollVotes/:sessionId', [middleware.sessionNameValidation, middleware.sessionValidation], messageController.getPollVotes)
 messageRouter.post('/runMethod/:sessionId', [middleware.sessionNameValidation, middleware.sessionValidation], messageController.runMethod)
 
 /**

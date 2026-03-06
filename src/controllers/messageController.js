@@ -736,6 +736,37 @@ const getContact = async (req, res) => {
 }
 
 /**
+ * Gets vote results for a message with a poll.
+ * @async
+ * @function getPollVotes
+ * @param {Object} req - The request object received by the server.
+ * @param {Object} req.body - The body of the request object.
+ * @param {string} req.body.messageId - The ID of the message to get information about.
+ * @param {string} req.body.chatId - The ID of the chat that contains the message to get information about.
+ * @param {string} req.params.sessionId - The ID of the session to use the Telegram API with.
+ * @param {Object} res - The response object to be sent back to the client.
+ * @returns {Object} - The response object with a JSON body containing the information about the message.
+ * @throws Will throw an error if the message is not found or if there is an error during the get poll votes operation.
+ */
+const getPollVotes = async (req, res) => {
+  /*
+    #swagger.summary = 'Get poll vote results for a message with a poll'
+    #swagger.description = 'May return null if the message does not exist or is not a poll.'
+  */
+  try {
+    const { messageId, chatId } = req.body
+    const client = sessions.get(req.params.sessionId)
+    const message = await _getMessageById(client, messageId, chatId)
+    if (!message) { throw new Error('Message not found') }
+    const votes = await message.getPollVotes()
+    res.json({ success: true, votes })
+  } catch (error) {
+    sendErrorResponse(res, 500, error.message)
+  }
+}
+
+
+/**
  * Executes a method on the message associated with the given sessionId.
  *
  * @async
@@ -816,5 +847,6 @@ module.exports = {
   getGroupMentions,
   edit,
   getContact,
+  getPollVotes,
   runMethod
 }
