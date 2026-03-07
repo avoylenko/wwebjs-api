@@ -187,7 +187,6 @@ const downloadMediaAsData = async (req, res) => {
  * @param {string} req.body.messageId - The ID of the message to forward.
  * @param {string} req.body.chatId - The ID of the chat that contains the message to forward.
  * @param {string} req.body.destinationChatId - The ID of the chat to forward the message to.
- * @param {string} req.params.sessionId - The ID of the session to use the Telegram API with.
  * @param {Object} res - The response object to be sent back to the client.
  * @returns {Object} - The response object with a JSON body containing the result of the forward operation.
  * @throws Will throw an error if the message is not found or if there is an error during the forward operation.
@@ -239,7 +238,6 @@ const forward = async (req, res) => {
  * @param {Object} req.body - The body of the request object.
  * @param {string} req.body.messageId - The ID of the message to get information about.
  * @param {string} req.body.chatId - The ID of the chat that contains the message to get information about.
- * @param {string} req.params.sessionId - The ID of the session to use the Telegram API with.
  * @param {Object} res - The response object to be sent back to the client.
  * @returns {Object} - The response object with a JSON body containing the information about the message.
  * @throws Will throw an error if the message is not found or if there is an error during the get info operation.
@@ -716,7 +714,7 @@ const edit = async (req, res) => {
  * @param {string} req.params.sessionId - The session ID.
  * @param {string} req.body.messageId - The message ID.
  * @param {string} req.body.chatId - The chat ID.
- * @returns {Promise} A Promise that resolves with the result of the message.getReactions() call.
+ * @returns {Promise} A Promise that resolves with the result of the message.getContact() call.
  * @throws {Error} If message is not found, it throws an error with the message "Message not found".
  */
 const getContact = async (req, res) => {
@@ -743,9 +741,8 @@ const getContact = async (req, res) => {
  * @param {Object} req.body - The body of the request object.
  * @param {string} req.body.messageId - The ID of the message to get information about.
  * @param {string} req.body.chatId - The ID of the chat that contains the message to get information about.
- * @param {string} req.params.sessionId - The ID of the session to use the Telegram API with.
  * @param {Object} res - The response object to be sent back to the client.
- * @returns {Object} - The response object with a JSON body containing the information about the message.
+ * @returns {Object} - The response object with a JSON body containing the poll results.
  * @throws Will throw an error if the message is not found or if there is an error during the get poll votes operation.
  */
 const getPollVotes = async (req, res) => {
