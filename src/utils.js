@@ -140,7 +140,7 @@ const patchWWebLibrary = async (client) => {
         return true
       }
 
-      const allChats = window.Store.Chat.getModelsArray()
+      const allChats = window.require('WAWebCollections').Chat.getModelsArray()
 
       const filteredChats = allChats.filter(chatFilter)
 
