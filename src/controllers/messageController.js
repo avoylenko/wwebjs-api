@@ -519,7 +519,10 @@ const reply = async (req, res) => {
         break
       }
       case 'Contact': {
-        const contactId = content.contactId.endsWith('@c.us') ? content.contactId : `${content.contactId}@c.us`
+        const contactId =
+          content.contactId.endsWith('@c.us') || content.contactId.endsWith('@lid')
+            ? content.contactId
+            : `${content.contactId}@c.us`;
         contentMessage = await client.getContactById(contactId)
         break
       }
