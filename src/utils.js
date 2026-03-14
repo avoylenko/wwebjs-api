@@ -16,7 +16,13 @@ const triggerWebhook = (webhookURL, sessionId, dataType, data) => {
 
 // Function to send a response with error status and message
 const sendErrorResponse = (res, status, message) => {
-  res.status(status).json({ success: false, error: message })
+  var resp = { success: false, error: message }
+  if (message.stack) resp.stack = message.stack;
+  if (message.name) resp.name = message.name;
+  if (message.fileName) resp.fileName = message.fileName;
+  if (message.lineNumber) resp.lineNumber = message.lineNumber;
+
+  res.status(status).json(resp)
 }
 
 // Function to wait for a specific item not to be null
