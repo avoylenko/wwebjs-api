@@ -109,7 +109,7 @@ const patchWWebLibrary = async (client) => {
 
       if (searchOptions && searchOptions.limit > 0) {
         while (msgs.length < searchOptions.limit) {
-          const loadedMessages = await (window.require('WAWebChatLoadMessages')).loadEarlierMsgs(chat);
+          const loadedMessages = await (window.require('WAWebChatLoadMessages')).loadEarlierMsgs(chat)
 
           if (!loadedMessages || !loadedMessages.length) break
           msgs = [...loadedMessages.filter(msgFilter), ...msgs]
@@ -134,9 +134,10 @@ const patchWWebLibrary = async (client) => {
         if (searchOptions && searchOptions.unread === true && c.unreadCount === 0) {
           return false
         }
-        if (searchOptions && searchOptions.since !== undefined && Number.isFinite(searchOptions.since) && c.t < searchOptions.since) {
-          return false
-        }
+        if (searchOptions && searchOptions.since !== undefined && Number.isFinite(searchOptions.since)) {
+          if (!c.t || !Number.isFinite(c.t) || c.t < searchOptions.since) {
+            return false
+          }
         return true
       }
 
