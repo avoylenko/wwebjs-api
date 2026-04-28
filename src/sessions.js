@@ -7,6 +7,56 @@ const { triggerWebhook, waitForNestedObject, isEventEnabled, sendMessageSeenStat
 const { logger } = require('./logger')
 const { initWebSocketServer, terminateWebSocketServer, triggerWebSocket } = require('./websocket')
 
+// ═══════════════════════════════════════════════════════════════════
+// Webhook Config Persistence
+// ═══════════════════════════════════════════════════════════════════
+
+const getWebhookConfigPath = (sessionId) => {
+  return path.join(sessionFolderPath, `session-${sessionId}`, 'webhook_config.json')
+}
+
+const saveWebhookConfig = async (sessionId, webhookUrl) => {
+  try {
+    const configPath = getWebhookConfigPath(sessionId)
+    const dirPath = path.dirname(configPath)
+    if (!fs.existsSync(dirPath)) {
+      return // Session folder doesn't exist yet, will be saved after session starts
+    }
+    if (webhookUrl) {
+      await fs.promises.writeFile(configPath, JSON.stringify({ webhookUrl }, null, 2))
+      logger.debug({ sessionId }, 'Webhook config saved to disk')
+    } else {
+      // Clear the config file if webhookUrl is null/empty
+      if (fs.existsSync(configPath)) {
+        await fs.promises.unlink(configPath)
+        logger.debug({ sessionId }, 'Webhook config removed from disk')
+      }
+    }
+  } catch (error) {
+    logger.error({ sessionId, err: error }, 'Failed to save webhook config')
+  }
+}
+
+const loadWebhookConfig = (sessionId) => {
+  try {
+    const configPath = getWebhookConfigPath(sessionId)
+    if (fs.existsSync(configPath)) {
+      const data = JSON.parse(fs.readFileSync(configPath, 'utf8'))
+      if (data && data.webhookUrl) {
+        logger.info({ sessionId, webhookUrl: data.webhookUrl }, 'Webhook config loaded from disk')
+        return data.webhookUrl
+      }
+    }
+  } catch (error) {
+    logger.error({ sessionId, err: error }, 'Failed to load webhook config')
+  }
+  return null
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Session Validation
+// ═══════════════════════════════════════════════════════════════════
+
 // Function to validate if the session is ready
 const validateSession = async (sessionId) => {
   try {
@@ -60,6 +110,10 @@ const validateSession = async (sessionId) => {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// Session Management
+// ═══════════════════════════════════════════════════════════════════
+
 // Function to handle client session restoration
 const restoreSessions = () => {
   try {
@@ -75,7 +129,9 @@ const restoreSessions = () => {
         if (match) {
           const sessionId = match[1]
           logger.warn({ sessionId }, 'Existing session detected')
-          await setupSession(sessionId)
+          // Load persisted webhook config if available
+          const savedWebhookUrl = loadWebhookConfig(sessionId)
+          await setupSession(sessionId, savedWebhookUrl ? { webhookUrl: savedWebhookUrl } : {})
         }
       }
     })
@@ -85,7 +141,7 @@ const restoreSessions = () => {
 }
 
 // Setup Session
-const setupSession = async (sessionId) => {
+const setupSession = async (sessionId, options = {}) => {
   try {
     if (sessions.has(sessionId)) {
       return { success: false, message: `Session already exists for: ${sessionId}`, client: sessions.get(sessionId) }
@@ -166,6 +222,13 @@ const setupSession = async (sessionId) => {
     }
 
     const client = new Client(clientOptions)
+
+    // Store custom webhook URL on client if provided via API or loaded from disk
+    if (options.webhookUrl) {
+      client.webhookUrl = options.webhookUrl
+      logger.info({ sessionId, webhookUrl: options.webhookUrl }, 'Custom webhook URL configured for session')
+    }
+
     if (releaseBrowserLock) {
       // See https://github.com/puppeteer/puppeteer/issues/4860
       const singletonLockPath = path.resolve(path.join(sessionFolderPath, `session-${sessionId}`, 'SingletonLock'))
@@ -181,6 +244,10 @@ const setupSession = async (sessionId) => {
         patchWWebLibrary(client).catch((err) => {
           logger.error({ sessionId, err }, 'Failed to patch WWebJS library')
         })
+        // Persist webhook config to disk once session folder is ready
+        if (options.webhookUrl) {
+          saveWebhookConfig(sessionId, options.webhookUrl)
+        }
       })
       initWebSocketServer(sessionId)
       initializeEvents(client, sessionId)
@@ -198,16 +265,55 @@ const setupSession = async (sessionId) => {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// Webhook Management
+// ═══════════════════════════════════════════════════════════════════
+
+// Function to set webhook URL for an active session at runtime
+const setSessionWebhook = (sessionId, webhookUrl) => {
+  const client = sessions.get(sessionId)
+  if (!client) {
+    return { success: false, message: 'session_not_found' }
+  }
+  client.webhookUrl = webhookUrl || null
+  // Persist to disk so it survives server restarts
+  saveWebhookConfig(sessionId, webhookUrl)
+  logger.info({ sessionId, webhookUrl: webhookUrl || '(cleared, using default)' }, 'Session webhook URL updated')
+  return { success: true, message: 'Webhook URL updated successfully', webhookUrl: client.webhookUrl }
+}
+
+// Function to get webhook URL for an active session
+const getSessionWebhook = (sessionId) => {
+  const client = sessions.get(sessionId)
+  if (!client) {
+    return { success: false, message: 'session_not_found' }
+  }
+  const envWebhook = process.env[sessionId.toUpperCase() + '_WEBHOOK_URL']
+  return {
+    success: true,
+    webhookUrl: client.webhookUrl || envWebhook || baseWebhookURL || null,
+    source: client.webhookUrl ? 'runtime' : (envWebhook ? 'env_session' : (baseWebhookURL ? 'env_global' : 'none'))
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Event Initialization
+// ═══════════════════════════════════════════════════════════════════
+
 const initializeEvents = (client, sessionId) => {
-  // check if the session webhook is overridden
-  const sessionWebhook = process.env[sessionId.toUpperCase() + '_WEBHOOK_URL'] || baseWebhookURL
+  // Priority: runtime webhookUrl > session env var > global env var
+  const getWebhookUrl = () => {
+    return client.webhookUrl || process.env[sessionId.toUpperCase() + '_WEBHOOK_URL'] || baseWebhookURL
+  }
 
   if (recoverSessions) {
     waitForNestedObject(client, 'pupPage').then(() => {
       const restartSession = async (sessionId) => {
+        // Preserve webhook URL across restarts (also persisted on disk)
+        const savedWebhookUrl = client.webhookUrl
         sessions.delete(sessionId)
         await client.destroy().catch(e => { })
-        await setupSession(sessionId)
+        await setupSession(sessionId, { webhookUrl: savedWebhookUrl })
       }
       client.pupPage.once('close', function () {
         // emitted when the page closes
@@ -238,7 +344,7 @@ const initializeEvents = (client, sessionId) => {
 
   if (isEventEnabled('auth_failure')) {
     client.on('auth_failure', (msg) => {
-      triggerWebhook(sessionWebhook, sessionId, 'status', { msg })
+      triggerWebhook(getWebhookUrl(), sessionId, 'status', { msg })
       triggerWebSocket(sessionId, 'status', { msg })
     })
   }
@@ -246,90 +352,90 @@ const initializeEvents = (client, sessionId) => {
   client.on('authenticated', () => {
     client.qr = null
     if (isEventEnabled('authenticated')) {
-      triggerWebhook(sessionWebhook, sessionId, 'authenticated')
+      triggerWebhook(getWebhookUrl(), sessionId, 'authenticated')
       triggerWebSocket(sessionId, 'authenticated')
     }
   })
 
   if (isEventEnabled('call')) {
     client.on('call', (call) => {
-      triggerWebhook(sessionWebhook, sessionId, 'call', { call })
+      triggerWebhook(getWebhookUrl(), sessionId, 'call', { call })
       triggerWebSocket(sessionId, 'call', { call })
     })
   }
 
   if (isEventEnabled('change_state')) {
     client.on('change_state', state => {
-      triggerWebhook(sessionWebhook, sessionId, 'change_state', { state })
+      triggerWebhook(getWebhookUrl(), sessionId, 'change_state', { state })
       triggerWebSocket(sessionId, 'change_state', { state })
     })
   }
 
   if (isEventEnabled('disconnected')) {
     client.on('disconnected', (reason) => {
-      triggerWebhook(sessionWebhook, sessionId, 'disconnected', { reason })
+      triggerWebhook(getWebhookUrl(), sessionId, 'disconnected', { reason })
       triggerWebSocket(sessionId, 'disconnected', { reason })
     })
   }
 
   if (isEventEnabled('group_join')) {
     client.on('group_join', (notification) => {
-      triggerWebhook(sessionWebhook, sessionId, 'group_join', { notification })
+      triggerWebhook(getWebhookUrl(), sessionId, 'group_join', { notification })
       triggerWebSocket(sessionId, 'group_join', { notification })
     })
   }
 
   if (isEventEnabled('group_leave')) {
     client.on('group_leave', (notification) => {
-      triggerWebhook(sessionWebhook, sessionId, 'group_leave', { notification })
+      triggerWebhook(getWebhookUrl(), sessionId, 'group_leave', { notification })
       triggerWebSocket(sessionId, 'group_leave', { notification })
     })
   }
 
   if (isEventEnabled('group_admin_changed')) {
     client.on('group_admin_changed', (notification) => {
-      triggerWebhook(sessionWebhook, sessionId, 'group_admin_changed', { notification })
+      triggerWebhook(getWebhookUrl(), sessionId, 'group_admin_changed', { notification })
       triggerWebSocket(sessionId, 'group_admin_changed', { notification })
     })
   }
 
   if (isEventEnabled('group_membership_request')) {
     client.on('group_membership_request', (notification) => {
-      triggerWebhook(sessionWebhook, sessionId, 'group_membership_request', { notification })
+      triggerWebhook(getWebhookUrl(), sessionId, 'group_membership_request', { notification })
       triggerWebSocket(sessionId, 'group_membership_request', { notification })
     })
   }
 
   if (isEventEnabled('group_update')) {
     client.on('group_update', (notification) => {
-      triggerWebhook(sessionWebhook, sessionId, 'group_update', { notification })
+      triggerWebhook(getWebhookUrl(), sessionId, 'group_update', { notification })
       triggerWebSocket(sessionId, 'group_update', { notification })
     })
   }
 
   if (isEventEnabled('loading_screen')) {
     client.on('loading_screen', (percent, message) => {
-      triggerWebhook(sessionWebhook, sessionId, 'loading_screen', { percent, message })
+      triggerWebhook(getWebhookUrl(), sessionId, 'loading_screen', { percent, message })
       triggerWebSocket(sessionId, 'loading_screen', { percent, message })
     })
   }
 
   if (isEventEnabled('media_uploaded')) {
     client.on('media_uploaded', (message) => {
-      triggerWebhook(sessionWebhook, sessionId, 'media_uploaded', { message })
+      triggerWebhook(getWebhookUrl(), sessionId, 'media_uploaded', { message })
       triggerWebSocket(sessionId, 'media_uploaded', { message })
     })
   }
 
   client.on('message', async (message) => {
     if (isEventEnabled('message')) {
-      triggerWebhook(sessionWebhook, sessionId, 'message', { message })
+      triggerWebhook(getWebhookUrl(), sessionId, 'message', { message })
       triggerWebSocket(sessionId, 'message', { message })
       if (message.hasMedia && message._data?.size < maxAttachmentSize) {
       // custom service event
         if (isEventEnabled('media')) {
           message.downloadMedia().then(messageMedia => {
-            triggerWebhook(sessionWebhook, sessionId, 'media', { messageMedia, message })
+            triggerWebhook(getWebhookUrl(), sessionId, 'media', { messageMedia, message })
             triggerWebSocket(sessionId, 'media', { messageMedia, message })
           }).catch(error => {
             logger.error({ sessionId, err: error }, 'Failed to download media')
@@ -346,49 +452,49 @@ const initializeEvents = (client, sessionId) => {
 
   if (isEventEnabled('message_ack')) {
     client.on('message_ack', (message, ack) => {
-      triggerWebhook(sessionWebhook, sessionId, 'message_ack', { message, ack })
+      triggerWebhook(getWebhookUrl(), sessionId, 'message_ack', { message, ack })
       triggerWebSocket(sessionId, 'message_ack', { message, ack })
     })
   }
 
   if (isEventEnabled('message_create')) {
     client.on('message_create', (message) => {
-      triggerWebhook(sessionWebhook, sessionId, 'message_create', { message })
+      triggerWebhook(getWebhookUrl(), sessionId, 'message_create', { message })
       triggerWebSocket(sessionId, 'message_create', { message })
     })
   }
 
   if (isEventEnabled('message_reaction')) {
     client.on('message_reaction', (reaction) => {
-      triggerWebhook(sessionWebhook, sessionId, 'message_reaction', { reaction })
+      triggerWebhook(getWebhookUrl(), sessionId, 'message_reaction', { reaction })
       triggerWebSocket(sessionId, 'message_reaction', { reaction })
     })
   }
 
   if (isEventEnabled('message_edit')) {
     client.on('message_edit', (message, newBody, prevBody) => {
-      triggerWebhook(sessionWebhook, sessionId, 'message_edit', { message, newBody, prevBody })
+      triggerWebhook(getWebhookUrl(), sessionId, 'message_edit', { message, newBody, prevBody })
       triggerWebSocket(sessionId, 'message_edit', { message, newBody, prevBody })
     })
   }
 
   if (isEventEnabled('message_ciphertext')) {
     client.on('message_ciphertext', (message) => {
-      triggerWebhook(sessionWebhook, sessionId, 'message_ciphertext', { message })
+      triggerWebhook(getWebhookUrl(), sessionId, 'message_ciphertext', { message })
       triggerWebSocket(sessionId, 'message_ciphertext', { message })
     })
   }
 
   if (isEventEnabled('message_revoke_everyone')) {
     client.on('message_revoke_everyone', (message) => {
-      triggerWebhook(sessionWebhook, sessionId, 'message_revoke_everyone', { message })
+      triggerWebhook(getWebhookUrl(), sessionId, 'message_revoke_everyone', { message })
       triggerWebSocket(sessionId, 'message_revoke_everyone', { message })
     })
   }
 
   if (isEventEnabled('message_revoke_me')) {
     client.on('message_revoke_me', (message, revokedMsg) => {
-      triggerWebhook(sessionWebhook, sessionId, 'message_revoke_me', { message, revokedMsg })
+      triggerWebhook(getWebhookUrl(), sessionId, 'message_revoke_me', { message, revokedMsg })
       triggerWebSocket(sessionId, 'message_revoke_me', { message, revokedMsg })
     })
   }
@@ -397,60 +503,64 @@ const initializeEvents = (client, sessionId) => {
     // inject qr code into session
     client.qr = qr
     if (isEventEnabled('qr')) {
-      triggerWebhook(sessionWebhook, sessionId, 'qr', { qr })
+      triggerWebhook(getWebhookUrl(), sessionId, 'qr', { qr })
       triggerWebSocket(sessionId, 'qr', { qr })
     }
   })
 
   if (isEventEnabled('ready')) {
     client.on('ready', () => {
-      triggerWebhook(sessionWebhook, sessionId, 'ready')
+      triggerWebhook(getWebhookUrl(), sessionId, 'ready')
       triggerWebSocket(sessionId, 'ready')
     })
   }
 
   if (isEventEnabled('contact_changed')) {
     client.on('contact_changed', (message, oldId, newId, isContact) => {
-      triggerWebhook(sessionWebhook, sessionId, 'contact_changed', { message, oldId, newId, isContact })
+      triggerWebhook(getWebhookUrl(), sessionId, 'contact_changed', { message, oldId, newId, isContact })
       triggerWebSocket(sessionId, 'contact_changed', { message, oldId, newId, isContact })
     })
   }
 
   if (isEventEnabled('chat_removed')) {
     client.on('chat_removed', (chat) => {
-      triggerWebhook(sessionWebhook, sessionId, 'chat_removed', { chat })
+      triggerWebhook(getWebhookUrl(), sessionId, 'chat_removed', { chat })
       triggerWebSocket(sessionId, 'chat_removed', { chat })
     })
   }
 
   if (isEventEnabled('chat_archived')) {
     client.on('chat_archived', (chat, currState, prevState) => {
-      triggerWebhook(sessionWebhook, sessionId, 'chat_archived', { chat, currState, prevState })
+      triggerWebhook(getWebhookUrl(), sessionId, 'chat_archived', { chat, currState, prevState })
       triggerWebSocket(sessionId, 'chat_archived', { chat, currState, prevState })
     })
   }
 
   if (isEventEnabled('unread_count')) {
     client.on('unread_count', (chat) => {
-      triggerWebhook(sessionWebhook, sessionId, 'unread_count', { chat })
+      triggerWebhook(getWebhookUrl(), sessionId, 'unread_count', { chat })
       triggerWebSocket(sessionId, 'unread_count', { chat })
     })
   }
 
   if (isEventEnabled('vote_update')) {
     client.on('vote_update', (vote) => {
-      triggerWebhook(sessionWebhook, sessionId, 'vote_update', { vote })
+      triggerWebhook(getWebhookUrl(), sessionId, 'vote_update', { vote })
       triggerWebSocket(sessionId, 'vote_update', { vote })
     })
   }
 
   if (isEventEnabled('code')) {
     client.on('code', (code) => {
-      triggerWebhook(sessionWebhook, sessionId, 'code', { code })
+      triggerWebhook(getWebhookUrl(), sessionId, 'code', { code })
       triggerWebSocket(sessionId, 'code', { code })
     })
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// Session Cleanup
+// ═══════════════════════════════════════════════════════════════════
 
 // Function to delete client session folder
 const deleteSessionFolder = async (sessionId) => {
@@ -480,6 +590,8 @@ const reloadSession = async (sessionId) => {
     if (!client) {
       return
     }
+    // Preserve webhook URL across reloads (also persisted on disk)
+    const savedWebhookUrl = client.webhookUrl
     client.pupPage?.removeAllListeners('close')
     client.pupPage?.removeAllListeners('error')
     try {
@@ -496,7 +608,7 @@ const reloadSession = async (sessionId) => {
       }
     }
     sessions.delete(sessionId)
-    await setupSession(sessionId)
+    await setupSession(sessionId, { webhookUrl: savedWebhookUrl })
   } catch (error) {
     logger.error({ sessionId, err: error }, 'Failed to reload session')
     throw error
@@ -597,5 +709,7 @@ module.exports = {
   deleteSession,
   reloadSession,
   flushSessions,
-  destroySession
+  destroySession,
+  setSessionWebhook,
+  getSessionWebhook
 }
