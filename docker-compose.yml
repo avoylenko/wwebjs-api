@@ -13,6 +13,14 @@ services:
     env_file: .env
     volumes:
       - ./sessions:/usr/src/app/sessions
+    # Optional: route Chromium (WhatsApp Web) traffic through an outbound proxy.
+    # Set PROXY_URL (and optionally PROXY_API_KEY) in .env, or
+    # uncomment the block below to point at the bundled tinyproxy service.
+    # environment:
+    #   PROXY_URL: http://tinyproxy:8888
+    #   # PROXY_API_KEY: your-api-key
+    # depends_on:
+    #   - tinyproxy
     # Optional healthcheck
     # healthcheck:
     #   test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
@@ -20,3 +28,17 @@ services:
     #   timeout: 10s
     #   retries: 3
     #   start_period: 40s
+
+  # Optional: local HTTP proxy for testing the PROXY_URL feature end-to-end.
+  # Uncomment along with the api `environment` / `depends_on` blocks above.
+  # tinyproxy:
+  #   image: vimagick/tinyproxy
+  #   container_name: wwebjs-tinyproxy
+  #   ports:
+  #     - "8888:8888"
+  #   environment:
+  #     ALLOWED_NETWORKS: 0.0.0.0/0
+  #     # Uncomment to test PROXY_API_KEY path (key sent as basic-auth username)
+  #     # BASIC_AUTH_USER: your-api-key
+  #     # BASIC_AUTH_PASSWORD: ""
+  #   restart: unless-stopped
