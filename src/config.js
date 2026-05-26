@@ -27,6 +27,7 @@ const basePath = process.env.BASE_PATH || '/'
 const trustProxy = process.env.TRUST_PROXY ? (process.env.TRUST_PROXY).toLowerCase() === 'true' : false
 const proxyUrl = process.env.PROXY_URL || null
 const proxyApiKey = process.env.PROXY_API_KEY || null
+const proxyUser = process.env.PROXY_USER || 'api-key'
 
 module.exports = {
   servicePort,
@@ -53,5 +54,6 @@ module.exports = {
   basePath,
   trustProxy,
   proxyUrl,
-  proxyApiKey
+  proxyApiKey,
+  proxyUser
 }

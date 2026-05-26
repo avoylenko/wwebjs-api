@@ -166,12 +166,12 @@ In order to validate a new WhatsApp Web instance you need to scan the QR code us
 ### Outbound Proxy
 The Chromium instance that powers each session can be routed through an outbound proxy by setting the `PROXY_URL` environment variable (e.g. `http://10.0.0.10:8118`, `https://...`, or `socks5://...`). When `PROXY_URL` is empty, sessions connect directly with no behavior change.
 
-If the proxy requires authentication, set `PROXY_API_KEY`. The value is forwarded to Chromium as the HTTP Basic-auth **username** with an **empty password** (via puppeteer's `proxyAuthentication`). This matches both:
+If the proxy requires authentication, set `PROXY_API_KEY`. The credential is sent as HTTP Basic auth (via puppeteer's `proxyAuthentication`) with:
 
-- API-key proxy vendors that document this shape (e.g. ScraperAPI, ZenRows, Webshare's API-token mode).
-- A self-hosted tinyproxy configured with `BasicAuth <key> ""` (empty password) — verified working against the bundled tinyproxy service.
+- **Username**: `PROXY_USER` if set, otherwise the default `api-key`.
+- **Password**: `PROXY_API_KEY`.
 
-Standard `user:password` proxies with a non-empty password are not currently supported; that would require a code change to add `PROXY_USER` / `PROXY_PASS`.
+This matches API-key proxy vendors that pair a fixed username string with the key as password, and works with a self-hosted tinyproxy configured as `BasicAuth <user> <key>`.
 
 ### WebSocket mode
 The service can dispatch realtime events through websocket connection. By default, the websocket is not activated, so you need manually set the `ENABLE_WEBSOCKET` environment variable to activate it. The server activates a new websocket instance per each active session. The websocket path is `/ws/:sessionId`, where sessionId is your configured session name. The websocket supports ping/pong scheme to keep the socket running.
