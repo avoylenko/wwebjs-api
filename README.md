@@ -164,7 +164,14 @@ By setting the `ENABLE_WEBHOOK` environment to `FALSE` you can disable webhook d
 In order to validate a new WhatsApp Web instance you need to scan the QR code using your mobile phone. Official documentation can be found at (https://faq.whatsapp.com/1079327266110265/?cms_platform=android) page. The service itself delivers the QR code content as a webhook event or you can use the REST endpoints (`/session/qr/:sessionId` or `/session/qr/:sessionId/image` to get the QR code as a png image). 
 
 ### Outbound Proxy
-The Chromium instance that powers each session can be routed through an outbound proxy by setting the `PROXY_URL` environment variable (e.g. `http://10.0.0.10:8118`, `https://...`, or `socks5://...`). If the proxy requires authentication, set `PROXY_API_KEY` — it is sent as the basic-auth username (the format API-key proxies expect). When `PROXY_URL` is empty, sessions connect directly with no behavior change.
+The Chromium instance that powers each session can be routed through an outbound proxy by setting the `PROXY_URL` environment variable (e.g. `http://10.0.0.10:8118`, `https://...`, or `socks5://...`). When `PROXY_URL` is empty, sessions connect directly with no behavior change.
+
+If the proxy requires authentication, set `PROXY_API_KEY`. The value is forwarded to Chromium as the HTTP Basic-auth **username** with an **empty password** (via puppeteer's `proxyAuthentication`). This matches both:
+
+- API-key proxy vendors that document this shape (e.g. ScraperAPI, ZenRows, Webshare's API-token mode).
+- A self-hosted tinyproxy configured with `BasicAuth <key> ""` (empty password) — verified working against the bundled tinyproxy service.
+
+Standard `user:password` proxies with a non-empty password are not currently supported; that would require a code change to add `PROXY_USER` / `PROXY_PASS`.
 
 ### WebSocket mode
 The service can dispatch realtime events through websocket connection. By default, the websocket is not activated, so you need manually set the `ENABLE_WEBSOCKET` environment variable to activate it. The server activates a new websocket instance per each active session. The websocket path is `/ws/:sessionId`, where sessionId is your configured session name. The websocket supports ping/pong scheme to keep the socket running.

@@ -14,8 +14,11 @@ services:
     volumes:
       - ./sessions:/usr/src/app/sessions
     # Optional: route Chromium (WhatsApp Web) traffic through an outbound proxy.
-    # Set PROXY_URL (and optionally PROXY_API_KEY) in .env, or
-    # uncomment the block below to point at the bundled tinyproxy service.
+    # Set PROXY_URL (and optionally PROXY_API_KEY) in .env, or uncomment the
+    # block below to point at the bundled tinyproxy service. PROXY_API_KEY is
+    # sent as Basic-auth username with an empty password — works with
+    # API-key vendor proxies (ScraperAPI, ZenRows, etc.) and with tinyproxy
+    # configured as `BasicAuth <key> ""`.
     # environment:
     #   PROXY_URL: http://tinyproxy:8888
     #   # PROXY_API_KEY: your-api-key
