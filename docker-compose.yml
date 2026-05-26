@@ -14,14 +14,13 @@ services:
     volumes:
       - ./sessions:/usr/src/app/sessions
     # Optional: route Chromium (WhatsApp Web) traffic through an outbound proxy.
-    # Set PROXY_URL (and optionally PROXY_API_KEY / PROXY_USER) in .env, or
-    # uncomment the block below to point at the bundled tinyproxy service.
-    # Basic auth: username = PROXY_USER (default "api-key"), password =
-    # PROXY_API_KEY. Tinyproxy must be configured as `BasicAuth <user> <key>`.
+    # Set PROXY_URL (and optionally PROXY_USERNAME / PROXY_PASSWORD for HTTP
+    # Basic auth) in .env, or uncomment the block below to point at the
+    # bundled tinyproxy service.
     # environment:
     #   PROXY_URL: http://tinyproxy:8888
-    #   # PROXY_API_KEY: your-api-key
-    #   # PROXY_USER: api-key
+    #   # PROXY_USERNAME: api-key
+    #   # PROXY_PASSWORD: your-api-key
     # depends_on:
     #   - tinyproxy
     # Optional healthcheck
@@ -41,7 +40,7 @@ services:
   #     - "8888:8888"
   #   environment:
   #     ALLOWED_NETWORKS: 0.0.0.0/0
-  #     # Uncomment to test PROXY_API_KEY path (key sent as basic-auth username)
+  #     # Uncomment to test the PROXY_USERNAME / PROXY_PASSWORD path.
   #     # BASIC_AUTH_USER: "api-key"
   #     # BASIC_AUTH_PASSWORD: "your-api-key"
   #   restart: unless-stopped
