@@ -163,6 +163,11 @@ By setting the `ENABLE_WEBHOOK` environment to `FALSE` you can disable webhook d
 
 In order to validate a new WhatsApp Web instance you need to scan the QR code using your mobile phone. Official documentation can be found at (https://faq.whatsapp.com/1079327266110265/?cms_platform=android) page. The service itself delivers the QR code content as a webhook event or you can use the REST endpoints (`/session/qr/:sessionId` or `/session/qr/:sessionId/image` to get the QR code as a png image). 
 
+### Outbound Proxy
+The Chromium instance that powers each session can be routed through an outbound proxy by setting the `PROXY_URL` environment variable (e.g. `http://10.0.0.10:8118`, `https://...`, or `socks5://...`). When `PROXY_URL` is empty, sessions connect directly with no behavior change.
+
+If the proxy requires authentication, set `PROXY_USERNAME` and `PROXY_PASSWORD`. When both are defined they are forwarded to Chromium as HTTP Basic auth via puppeteer's `proxyAuthentication`. For API-key vendor proxies, use the vendor-specified username (often `api-key`) and the key itself as the password.
+
 ### WebSocket mode
 The service can dispatch realtime events through websocket connection. By default, the websocket is not activated, so you need manually set the `ENABLE_WEBSOCKET` environment variable to activate it. The server activates a new websocket instance per each active session. The websocket path is `/ws/:sessionId`, where sessionId is your configured session name. The websocket supports ping/pong scheme to keep the socket running.
 The below example shows how to receive the events for **test** session.
