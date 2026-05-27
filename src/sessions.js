@@ -146,7 +146,7 @@ const setupSession = async (sessionId) => {
       authStrategy: localAuth
     }
 
-    if (proxyUrl && proxyUsername && proxyPassword) {
+    if (proxyUrl && proxyUsername != null && proxyPassword != null) {
       clientOptions.proxyAuthentication = { username: proxyUsername, password: proxyPassword }
     }
 

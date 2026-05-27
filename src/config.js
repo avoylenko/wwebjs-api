@@ -26,8 +26,8 @@ const autoStartSessions = process.env.AUTO_START_SESSIONS ? (process.env.AUTO_ST
 const basePath = process.env.BASE_PATH || '/'
 const trustProxy = process.env.TRUST_PROXY ? (process.env.TRUST_PROXY).toLowerCase() === 'true' : false
 const proxyUrl = process.env.PROXY_URL || null
-const proxyUsername = process.env.PROXY_USERNAME || null
-const proxyPassword = process.env.PROXY_PASSWORD || null
+const proxyUsername = process.env.PROXY_USERNAME ?? null
+const proxyPassword = process.env.PROXY_PASSWORD ?? null
 
 module.exports = {
   servicePort,
