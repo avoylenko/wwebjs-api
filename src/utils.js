@@ -15,7 +15,11 @@ const triggerWebhook = (webhookURL, sessionId, dataType, data) => {
 }
 
 // Function to send a response with error status and message
-const sendErrorResponse = (res, status, message) => {
+const sendErrorResponse = (res, status, error) => {
+  const message = error instanceof Error ? error.message : error
+  if (error instanceof Error) {
+    logger.error({ err: error }, message)
+  }
   res.status(status).json({ success: false, error: message })
 }
 

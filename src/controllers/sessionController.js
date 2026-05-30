@@ -47,7 +47,7 @@ const startSession = async (req, res) => {
     res.json({ success: true, message: setupSessionReturn.message })
   } catch (error) {
     logger.error({ sessionId, err: error }, 'Failed to start session')
-    sendErrorResponse(res, 500, error.message)
+    res.status(500).json({ success: false, error: error.message })
   }
 }
 
@@ -80,7 +80,7 @@ const stopSession = async (req, res) => {
     res.json({ success: true, message: 'Session stopped successfully' })
   } catch (error) {
     logger.error({ sessionId, err: error }, 'Failed to stop session')
-    sendErrorResponse(res, 500, error.message)
+    res.status(500).json({ success: false, error: error.message })
   }
 }
 
@@ -113,7 +113,7 @@ const statusSession = async (req, res) => {
     res.json(sessionData)
   } catch (error) {
     logger.error({ sessionId, err: error }, 'Failed to get session status')
-    sendErrorResponse(res, 500, error.message)
+    res.status(500).json({ success: false, error: error.message })
   }
 }
 
@@ -145,7 +145,7 @@ const sessionQrCode = async (req, res) => {
     return res.json({ success: false, message: 'qr code not ready or already scanned' })
   } catch (error) {
     logger.error({ sessionId, err: error }, 'Failed to get session qr code')
-    sendErrorResponse(res, 500, error.message)
+    res.status(500).json({ success: false, error: error.message })
   }
 }
 
@@ -188,7 +188,7 @@ const sessionQrCodeImage = async (req, res) => {
     return res.json({ success: false, message: 'qr code not ready or already scanned' })
   } catch (error) {
     logger.error({ sessionId, err: error }, 'Failed to get session qr code image')
-    sendErrorResponse(res, 500, error.message)
+    res.status(500).json({ success: false, error: error.message })
   }
 }
 
@@ -225,7 +225,7 @@ const restartSession = async (req, res) => {
     res.json({ success: true, message: 'Restarted successfully' })
   } catch (error) {
     logger.error({ sessionId, err: error }, 'Failed to restart session')
-    sendErrorResponse(res, 500, error.message)
+    res.status(500).json({ success: false, error: error.message })
   }
 }
 
@@ -262,7 +262,7 @@ const terminateSession = async (req, res) => {
     res.json({ success: true, message: 'Logged out successfully' })
   } catch (error) {
     logger.error({ sessionId, err: error }, 'Failed to terminate session')
-    sendErrorResponse(res, 500, error.message)
+    res.status(500).json({ success: false, error: error.message })
   }
 }
 
@@ -292,8 +292,8 @@ const terminateInactiveSessions = async (req, res) => {
     */
     res.json({ success: true, message: 'Flush completed successfully' })
   } catch (error) {
-    logger.error(error, 'Failed to terminate inactive sessions')
-    sendErrorResponse(res, 500, error.message)
+    logger.error({ err: error }, 'Failed to terminate inactive sessions')
+    res.status(500).json({ success: false, error: error.message })
   }
 }
 
@@ -323,8 +323,8 @@ const terminateAllSessions = async (req, res) => {
     */
     res.json({ success: true, message: 'Flush completed successfully' })
   } catch (error) {
-    logger.error(error, 'Failed to terminate all sessions')
-    sendErrorResponse(res, 500, error.message)
+    logger.error({ err: error }, 'Failed to terminate all sessions')
+    res.status(500).json({ success: false, error: error.message })
   }
 }
 
@@ -363,9 +363,10 @@ const requestPairingCode = async (req, res) => {
       },
     }
   */
+  const sessionId = req.params.sessionId
   try {
     const { phoneNumber, showNotification = true } = req.body
-    const client = sessions.get(req.params.sessionId)
+    const client = sessions.get(sessionId)
     if (!client) {
       return res.json({ success: false, message: 'session_not_found' })
     }
@@ -377,7 +378,8 @@ const requestPairingCode = async (req, res) => {
     const result = await client.requestPairingCode(phoneNumber, showNotification)
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    logger.error({ sessionId, err: error }, 'Failed to request pairing code')
+    res.status(500).json({ success: false, error: error.message })
   }
 }
 
@@ -449,7 +451,7 @@ const getPageScreenshot = async (req, res) => {
     res.end()
   } catch (error) {
     logger.error({ sessionId, err: error }, 'Failed to get page screenshot')
-    sendErrorResponse(res, 500, error.message)
+    res.status(500).json({ success: false, error: error.message })
   }
 }
 
