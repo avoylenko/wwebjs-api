@@ -12,7 +12,11 @@ services:
       - "${PORT:-3000}:${PORT:-3000}"
     env_file: .env
     volumes:
-      - ./sessions:/usr/src/app/sessions
+      # Use a named Docker volume so WhatsApp sessions persist across
+      # container recreations / redeploys (e.g. on Dokploy). The data lives
+      # in Docker-managed storage, NOT inside the repository directory, so a
+      # fresh deploy no longer resets the session.
+      - wwebjs_sessions:/usr/src/app/sessions
     # Optional: route Chromium (WhatsApp Web) traffic through an outbound proxy.
     # Set PROXY_URL (and optionally PROXY_USERNAME / PROXY_PASSWORD for HTTP
     # Basic auth) in .env, or uncomment the block below to point at the
@@ -44,3 +48,8 @@ services:
   #     # BASIC_AUTH_USER: "api-key"
   #     # BASIC_AUTH_PASSWORD: "your-api-key"
   #   restart: unless-stopped
+
+# Named volumes managed by Docker. Persists independently of the container
+# and the repository working directory, so sessions survive redeploys.
+volumes:
+  wwebjs_sessions:
