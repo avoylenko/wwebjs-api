@@ -27,7 +27,7 @@ const getClassInfo = async (req, res) => {
     }
     res.json({ success: true, chat })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -58,7 +58,7 @@ const clearMessages = async (req, res) => {
     const result = await chat.clearMessages()
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -89,7 +89,7 @@ const clearState = async (req, res) => {
     const result = await chat.clearState()
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -121,7 +121,7 @@ const deleteChat = async (req, res) => {
     const result = await chat.delete()
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -176,7 +176,7 @@ const fetchMessages = async (req, res) => {
     const messages = Object.keys(searchOptions).length ? await chat.fetchMessages(searchOptions) : await chat.fetchMessages()
     res.json({ success: true, messages })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -206,7 +206,7 @@ const getContact = async (req, res) => {
     const contact = await chat.getContact()
     res.json({ success: true, contact })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -238,7 +238,7 @@ const sendStateRecording = async (req, res) => {
     const result = await chat.sendStateRecording()
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -270,7 +270,7 @@ const sendStateTyping = async (req, res) => {
     const result = await chat.sendStateTyping()
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -301,7 +301,7 @@ const sendSeen = async (req, res) => {
     const result = await chat.sendSeen()
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -332,7 +332,7 @@ const markUnread = async (req, res) => {
     const result = await chat.markUnread()
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -363,7 +363,7 @@ const syncHistory = async (req, res) => {
     const result = await chat.syncHistory()
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -395,7 +395,7 @@ const getLabels = async (req, res) => {
     const labels = await chat.getLabels()
     res.json({ success: true, labels })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -444,7 +444,7 @@ const changeLabels = async (req, res) => {
     await chat.changeLabels(labelIds)
     res.json({ success: true })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -504,7 +504,7 @@ const runMethod = async (req, res) => {
     const result = options ? await chat[method](options) : await chat[method]()
     res.json({ success: true, data: result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 

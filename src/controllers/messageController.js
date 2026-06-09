@@ -41,7 +41,7 @@ const getClassInfo = async (req, res) => {
     if (!message) { throw new Error('Message not found') }
     res.json({ success: true, message })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -97,7 +97,7 @@ const deleteMessage = async (req, res) => {
     const result = await message.delete(everyone, clearMedia)
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -126,7 +126,7 @@ const downloadMedia = async (req, res) => {
     const messageMedia = await message.downloadMedia()
     res.json({ success: true, messageMedia })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -174,7 +174,7 @@ const downloadMediaAsData = async (req, res) => {
     })
     readableStream.pipe(res)
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -226,7 +226,7 @@ const forward = async (req, res) => {
     const result = await message.forward(destinationChatId)
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -255,7 +255,7 @@ const getInfo = async (req, res) => {
     const info = await message.getInfo()
     res.json({ success: true, info })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -285,7 +285,7 @@ const getMentions = async (req, res) => {
     const contacts = await message.getMentions()
     res.json({ success: true, contacts })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -315,7 +315,7 @@ const getOrder = async (req, res) => {
     const order = await message.getOrder()
     res.json({ success: true, order })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -345,7 +345,7 @@ const getPayment = async (req, res) => {
     const payment = await message.getPayment()
     res.json({ success: true, payment })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -375,7 +375,7 @@ const getQuotedMessage = async (req, res) => {
     const quotedMessage = await message.getQuotedMessage()
     res.json({ success: true, quotedMessage })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -429,7 +429,7 @@ const react = async (req, res) => {
     const result = await message.react(reaction)
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -522,7 +522,7 @@ const reply = async (req, res) => {
         const contactId =
           content.contactId.endsWith('@c.us') || content.contactId.endsWith('@lid')
             ? content.contactId
-            : `${content.contactId}@c.us`;
+            : `${content.contactId}@c.us`
         contentMessage = await client.getContactById(contactId)
         break
       }
@@ -538,7 +538,7 @@ const reply = async (req, res) => {
     const repliedMessage = await message.reply(contentMessage, chatId, options)
     res.json({ success: true, repliedMessage })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -566,7 +566,7 @@ const star = async (req, res) => {
     const result = await message.star()
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -594,7 +594,7 @@ const unstar = async (req, res) => {
     const result = await message.unstar()
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -622,7 +622,7 @@ const getReactions = async (req, res) => {
     const result = await message.getReactions()
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -650,7 +650,7 @@ const getGroupMentions = async (req, res) => {
     const result = await message.getGroupMentions()
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -704,7 +704,7 @@ const edit = async (req, res) => {
     const editedMessage = await message.edit(content, options)
     res.json({ success: true, message: editedMessage })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -732,7 +732,7 @@ const getContact = async (req, res) => {
     const contact = await message.getContact()
     res.json({ success: true, contact })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -761,10 +761,9 @@ const getPollVotes = async (req, res) => {
     const votes = await message.getPollVotes()
     res.json({ success: true, votes })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
-
 
 /**
  * Executes a method on the message associated with the given sessionId.
@@ -824,7 +823,7 @@ const runMethod = async (req, res) => {
     const result = options ? await message[method](options) : await message[method]()
     res.json({ success: true, data: result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 

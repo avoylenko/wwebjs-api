@@ -15,7 +15,11 @@ const triggerWebhook = (webhookURL, sessionId, dataType, data) => {
 }
 
 // Function to send a response with error status and message
-const sendErrorResponse = (res, status, message) => {
+const sendErrorResponse = (res, status, error) => {
+  const message = error instanceof Error ? error.message : error
+  if (error instanceof Error) {
+    logger.error({ err: error }, message)
+  }
   res.status(status).json({ success: false, error: message })
 }
 
@@ -98,7 +102,7 @@ const patchWWebLibrary = async (client) => {
         if (searchOptions && searchOptions.since !== undefined && Number.isFinite(searchOptions.since) && m.t < searchOptions.since) {
           return false
         }
-        if (searchOptions && searchOptions.messageId !== undefined && m.id.id != searchOptions.messageId) {
+        if (searchOptions && searchOptions.messageId !== undefined && m.id.id !== searchOptions.messageId) {
           return false
         }
         return true
@@ -109,7 +113,7 @@ const patchWWebLibrary = async (client) => {
 
       if (searchOptions && searchOptions.limit > 0) {
         while (msgs.length < searchOptions.limit) {
-          const loadedMessages = await (window.require('WAWebChatLoadMessages')).loadEarlierMsgs(chat);
+          const loadedMessages = await (window.require('WAWebChatLoadMessages')).loadEarlierMsgs({ chat })
 
           if (!loadedMessages || !loadedMessages.length) break
           msgs = [...loadedMessages.filter(msgFilter), ...msgs]
