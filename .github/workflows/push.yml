@@ -54,7 +54,7 @@ jobs:
             echo "tags=avoylenko/wwebjs-api:${{ github.ref_name }},avoylenko/wwebjs-api:latest" >> $GITHUB_OUTPUT
           fi
       - name: Build and push with dynamic tag
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
