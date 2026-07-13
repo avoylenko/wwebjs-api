@@ -1,8 +1,9 @@
 const express = require('express')
+const path = require('path')
 const routes = express.Router()
 const swaggerUi = require('swagger-ui-express')
 const swaggerDocument = require('../swagger.json')
-const { enableLocalCallbackExample, enableSwaggerEndpoint } = require('./config')
+const { enableLocalCallbackExample, enableSwaggerEndpoint, enableWebUI } = require('./config')
 
 const middleware = require('./middleware')
 const healthController = require('./controllers/healthController')
@@ -260,6 +261,24 @@ channelRouter.post('/deleteChannel/:sessionId', [middleware.sessionNameValidatio
 if (enableSwaggerEndpoint) {
   routes.use('/api-docs', swaggerUi.serve)
   routes.get('/api-docs', swaggerUi.setup(swaggerDocument) /* #swagger.ignore = true */)
+}
+
+/**
+ * ================
+ * WEB UI ENDPOINTS
+ * ================
+ */
+if (enableWebUI) {
+  routes.get('/dashboard', (req, res, next) => {
+    // #swagger.ignore = true
+    // redirect to the trailing-slash URL so relative asset paths resolve correctly
+    const urlPath = req.originalUrl.split('?')[0]
+    if (!urlPath.endsWith('/')) {
+      return res.redirect(301, urlPath + '/')
+    }
+    next()
+  })
+  routes.use('/dashboard', express.static(path.join(__dirname, '../public/dashboard')))
 }
 
 module.exports = { routes }

@@ -11,6 +11,7 @@ const maxAttachmentSize = parseInt(process.env.MAX_ATTACHMENT_SIZE) || 10000000
 const setMessagesAsSeen = (process.env.SET_MESSAGES_AS_SEEN || '').toLowerCase() === 'true'
 const disabledCallbacks = process.env.DISABLED_CALLBACKS ? process.env.DISABLED_CALLBACKS.split('|') : []
 const enableSwaggerEndpoint = (process.env.ENABLE_SWAGGER_ENDPOINT || '').toLowerCase() === 'true'
+const enableWebUI = (process.env.ENABLE_WEB_UI || '').toLowerCase() === 'true'
 const webVersion = process.env.WEB_VERSION
 const webVersionCacheType = process.env.WEB_VERSION_CACHE_TYPE || 'none'
 const rateLimitMax = parseInt(process.env.RATE_LIMIT_MAX) || 1000
@@ -39,6 +40,7 @@ module.exports = {
   setMessagesAsSeen,
   disabledCallbacks,
   enableSwaggerEndpoint,
+  enableWebUI,
   webVersion,
   webVersionCacheType,
   rateLimitMax,

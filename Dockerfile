@@ -44,6 +44,7 @@ COPY server.js ./
 COPY LICENSE ./
 COPY swagger.json ./
 COPY src/ ./src/
+COPY public/ ./public/
 
 EXPOSE 3000
 

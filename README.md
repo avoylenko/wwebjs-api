@@ -159,6 +159,10 @@ By setting the `DISABLED_CALLBACKS` environment variable you can specify what ev
 
 By setting the `ENABLE_WEBHOOK` environment to `FALSE` you can disable webhook dispatching. This will help you if you want to switch to websocket method(see below).
 
+### Web dashboard
+
+The service ships with a simple web UI for session management. It is disabled by default — set the `ENABLE_WEB_UI` environment variable to `TRUE`, restart the service and go to the `/dashboard` endpoint. The dashboard lets you start, stop, restart and terminate sessions, scan the pairing QR code (or request a pairing code for a phone number) and inspect connected session details. If the `API_KEY` environment variable is set, enter the key in the dashboard header — it is stored in your browser's localStorage and sent as the `x-api-key` header with every request.
+
 ### Scanning QR code
 
 In order to validate a new WhatsApp Web instance you need to scan the QR code using your mobile phone. Official documentation can be found at (https://faq.whatsapp.com/1079327266110265/?cms_platform=android) page. The service itself delivers the QR code content as a webhook event or you can use the REST endpoints (`/session/qr/:sessionId` or `/session/qr/:sessionId/image` to get the QR code as a png image). 
