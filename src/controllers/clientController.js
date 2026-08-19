@@ -1,6 +1,6 @@
 const { MessageMedia, Location, Poll } = require('whatsapp-web.js')
 const { sessions } = require('../sessions')
-const { sendErrorResponse } = require('../utils')
+const { sendErrorResponse, logMissingMessage } = require('../utils')
 
 /**
  * Send a message to a chat using the WhatsApp API
@@ -108,6 +108,13 @@ const sendMessage = async (req, res) => {
       }
       default:
         return sendErrorResponse(res, 400, 'invalid contentType')
+    }
+    // Callers keep the returned id to correlate the message later on, so a success without a
+    // message would leave them dereferencing undefined. The library returns nothing when it
+    // refuses to send the content, which is a failure and has to be reported as one.
+    if (!messageOut) {
+      await logMissingMessage(client, chatId)
+      return sendErrorResponse(res, 500, 'whatsapp-web.js did not return the sent message')
     }
     res.json({ success: true, message: messageOut })
   } catch (error) {
