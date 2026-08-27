@@ -46,15 +46,17 @@ describe('POST /client/sendMessage', () => {
     expect(res.body).toEqual({ success: true, message: sentMessage })
   })
 
-  it('fails instead of answering 200 without a message', async () => {
+  it('says the message is missing instead of pretending it is there', async () => {
     const req = createRequest({ sendMessage: async () => undefined })
     const res = createResponse()
 
     await sendMessage(req, res)
 
-    expect(res.statusCode).toBe(500)
-    expect(res.body.success).toBe(false)
-    expect(res.body.error).toMatch(/did not return the sent message/)
+    // not a 500: the library looks the message up only after handing it to the chat, so a retry
+    // would send the contact a second copy of something they already have
+    expect(res.statusCode).toBe(200)
+    expect(res.body.message).toBeNull()
+    expect(res.body.warning).toMatch(/did not return the sent message/)
   })
 })
 
@@ -77,14 +79,14 @@ describe('POST /channel/sendMessage', () => {
     expect(res.body).toEqual({ success: true, message: sentMessage })
   })
 
-  it('fails instead of answering 200 without a message', async () => {
+  it('says the message is missing instead of pretending it is there', async () => {
     const req = createChannelRequest({ isChannel: true, sendMessage: async () => null })
     const res = createResponse()
 
     await sendChannelMessage(req, res)
 
-    expect(res.statusCode).toBe(500)
-    expect(res.body.success).toBe(false)
-    expect(res.body.error).toMatch(/did not return the sent message/)
+    expect(res.statusCode).toBe(200)
+    expect(res.body.message).toBeNull()
+    expect(res.body.warning).toMatch(/did not return the sent message/)
   })
 })

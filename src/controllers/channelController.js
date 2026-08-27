@@ -136,7 +136,11 @@ const sendMessage = async (req, res) => {
         return sendErrorResponse(res, 400, 'invalid contentType')
     }
     if (!messageOut) {
-      return sendErrorResponse(res, 500, 'whatsapp-web.js did not return the sent message')
+      return res.json({
+        success: true,
+        message: null,
+        warning: 'whatsapp-web.js did not return the sent message; it may still have been delivered'
+      })
     }
     res.json({ success: true, message: messageOut })
   } catch (error) {

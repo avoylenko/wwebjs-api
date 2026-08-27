@@ -109,12 +109,17 @@ const sendMessage = async (req, res) => {
       default:
         return sendErrorResponse(res, 400, 'invalid contentType')
     }
-    // Callers keep the returned id to correlate the message later on, so a success without a
-    // message would leave them dereferencing undefined. The library returns nothing when it
-    // refuses to send the content, which is a failure and has to be reported as one.
+    // The library looks the message up only after it has already handed it to the chat, so
+    // nothing coming back does not mean nothing was sent - answering 500 here would invite the
+    // caller to retry a message the contact has already received. Say plainly that the message
+    // is missing instead, and report what the page looked like so the cause is not guesswork.
     if (!messageOut) {
       await logMissingMessage(client, chatId)
-      return sendErrorResponse(res, 500, 'whatsapp-web.js did not return the sent message')
+      return res.json({
+        success: true,
+        message: null,
+        warning: 'whatsapp-web.js did not return the sent message; it may still have been delivered'
+      })
     }
     res.json({ success: true, message: messageOut })
   } catch (error) {
