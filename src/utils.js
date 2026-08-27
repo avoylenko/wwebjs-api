@@ -199,12 +199,12 @@ const patchSerializedIds = async (client) => {
   })
 }
 
-const patchWWebLibrary = async (client) => {
+const patchWWebLibrary = async (client, sessionId) => {
   // MUST be run after the 'ready' event fired
   try {
-    logger.info(await patchSerializedIds(client), 'Serialized id patch')
+    logger.info({ sessionId, ...await patchSerializedIds(client) }, 'Serialized id patch')
   } catch (error) {
-    logger.error({ err: error }, 'Failed to patch serialized ids')
+    logger.error({ sessionId, err: error }, 'Failed to patch serialized ids')
   }
 
   Client.prototype.getChats = async function (searchOptions = {}) {

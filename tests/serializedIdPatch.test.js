@@ -141,6 +141,20 @@ describe('patchSerializedIds', () => {
       expect(chat.id._serialized).toBe('123@c.us')
     })
 
+    it('applies again after the page reloaded and dropped the patch', async () => {
+      // `ready` fires again on every reload, and the page comes back without the prototype
+      // getter. In production the patch went stale about a day into each session and
+      // `Msg.get(key._serialized)` started missing for every message the library had just sent.
+      const reloaded = createFakeWindow({ widField: '$1', msgKeyField: '$1' })
+      const result = await patchSerializedIds(createFakeClient(reloaded))
+
+      expect(result.applied).toBe(true)
+      const wid = reloaded.require('WAWebWidFactory').createWid('123@c.us')
+      const key = new (reloaded.require('WAWebMsgKey'))({ from: wid, to: wid, id: 'ABCD', selfDir: 'out' })
+      // this is the read whatsapp-web.js does on the message it has just sent
+      expect(key._serialized).toBe('true_123@c.us_ABCD_out')
+    })
+
     it('does not apply twice', async () => {
       const wrapped = fakeWindow.WWebJS.getMessageModel
       const result = await patchSerializedIds(createFakeClient(fakeWindow))
