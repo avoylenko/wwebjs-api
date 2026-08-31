@@ -183,8 +183,14 @@ const setupSession = async (sessionId) => {
     }
 
     try {
-      client.once('ready', () => {
-        patchWWebLibrary(client).catch((err) => {
+      // `ready` fires again every time the page reloads and the library re-injects itself, not
+      // just once per session. The in-page half of the patch lives on the page's own prototypes,
+      // so a reload wipes it - and with `once` it was never put back. In production the patch went
+      // stale roughly a day after each session start, which is exactly when `sendMessage` began
+      // handing back nothing. Re-run it on every `ready`; `patchSerializedIds` is idempotent and
+      // reports `already applied` when the page still carries it.
+      client.on('ready', () => {
+        patchWWebLibrary(client, sessionId).catch((err) => {
           logger.error({ sessionId, err }, 'Failed to patch WWebJS library')
         })
       })
