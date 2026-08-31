@@ -665,6 +665,14 @@ const getChatLabels = async (req, res) => {
         }
       },
     }
+    #swagger.responses[200] = {
+    description: 'Retrieved all labels for the chat.',
+    content: {
+      'application/json': {
+        schema: { "$ref": "#/definitions/GetChatLabelsResponse" }
+      }
+    } 
+  }
   */
   try {
     const { chatId } = req.body
@@ -703,6 +711,14 @@ const getChatsByLabelId = async (req, res) => {
           },
         }
       },
+    }
+    #swagger.responses[200] = {
+      description: 'Retrieved all chats.',
+      content: {
+        'application/json': {
+          schema: { "$ref": "#/definitions/GetChatsResponse" }
+        }
+      } 
     }
   */
   try {
@@ -859,6 +875,14 @@ const getLabelById = async (req, res) => {
         }
       },
     }
+    #swagger.responses[200] = {
+      description: 'Retrieved the label.',
+      content: {
+        'application/json': {
+          schema: { "$ref": "#/definitions/GetLabelResponse" }
+        }
+      } 
+    }
   */
   try {
     const { labelId } = req.body
@@ -883,6 +907,15 @@ const getLabelById = async (req, res) => {
 const getLabels = async (req, res) => {
   /*
     #swagger.summary = 'Get all current labels'
+    #swagger.description = 'Retrieve all labels for the given session ID.'
+    #swagger.responses[200] = {
+      description: 'Retrieved all labels.',
+      content: {
+        'application/json': {
+          schema: { "$ref": "#/definitions/GetLabelsResponse" }
+        }
+      } 
+    }
   */
   try {
     const client = sessions.get(req.params.sessionId)
@@ -922,6 +955,14 @@ const addOrRemoveLabels = async (req, res) => {
         },
       }
     },
+  }
+  #swagger.responses[200] = {
+    description: 'Labels changed successfully.',
+    content: {
+      'application/json': {
+        schema: { "$ref": "#/definitions/SuccessResponse" }
+      }
+    } 
   }
   */
   try {
