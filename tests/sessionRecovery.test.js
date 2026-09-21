@@ -39,7 +39,7 @@ jest.mock('whatsapp-web.js', () => {
       this.pupPage = new MockEventEmitter()
       this.pupPage.isClosed = () => false
       this.pupPage.evaluate = async () => 1
-      this.pupBrowser = { process: () => this.browserProcess }
+      this.pupBrowser = { process: () => this.browserProcess, isConnected: () => false }
       this.destroyCalls = 0
       this.state = 'CONNECTED'
       mockClients.push(this)
@@ -60,7 +60,12 @@ jest.mock('whatsapp-web.js', () => {
   }
 
   class FakeLocalAuth {
-    constructor (options) { this.options = options }
+    constructor (options) {
+      this.options = options
+      // The real LocalAuth creates the profile directory, and the delete path expects it.
+      require('fs').mkdirSync(require('path').join(options.dataPath, `session-${options.clientId}`), { recursive: true })
+    }
+
     logout () {}
   }
 
@@ -271,5 +276,36 @@ describe('manual reload', () => {
 
     expect(original.browserProcess.signal).toBe('SIGKILL')
     expect(mockClients).toHaveLength(2)
+  })
+})
+
+describe('session validation', () => {
+  // The existing retry loop looks like a timeout but is not one: the race resolves after a
+  // second either way, and the getState that follows had no deadline at all. A wedged page
+  // held /session/status open for the whole protocol timeout.
+  it('gives up instead of hanging when the page stops answering', async () => {
+    await sessionsModule.setupSession('frozen')
+    mockHooks.getState = () => new Promise(() => {})
+
+    const result = await sessionsModule.validateSession('frozen')
+
+    expect(result.success).toBe(false)
+    expect(result.state).toBe('unresponsive')
+  })
+})
+
+describe('session deletion', () => {
+  // deleteSession only tore the browser down for the exact message 'session_not_connected'.
+  // Any other unhealthy verdict fell through both branches and left the process running.
+  it('tears the browser down when the page is already gone', async () => {
+    await sessionsModule.setupSession('drop')
+    const client = mockClients[0]
+    client.pupPage.isClosed = () => true
+
+    const validation = await sessionsModule.validateSession('drop')
+    await sessionsModule.deleteSession('drop', validation)
+
+    expect(client.destroyCalls).toBe(1)
+    expect(sessionsModule.sessions.has('drop')).toBe(false)
   })
 })

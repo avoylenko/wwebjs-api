@@ -55,7 +55,7 @@ const handleUpgrade = (request, socket, head) => {
   const host = request.headers['x-forwarded-host'] || request.headers.host
   const baseUrl = 'ws://' + host + '/'
   const { pathname } = new URL(request.url, baseUrl)
-  
+
   // Handle base path for WebSocket connections
   const wsPath = basePath ? `${basePath}/ws/` : '/ws/'
   if (pathname.startsWith(wsPath)) {

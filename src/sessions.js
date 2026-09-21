@@ -7,6 +7,20 @@ const { triggerWebhook, waitForNestedObject, isEventEnabled, sendMessageSeenStat
 const { logger } = require('./logger')
 const { initWebSocketServer, terminateWebSocketServer, triggerWebSocket } = require('./websocket')
 
+// `getState()` is a round trip into the page, so on a wedged browser it never comes back. Every
+// caller needs a deadline, and needs to tell "not connected" apart from "not answering".
+const getStateWithDeadline = async (client, sessionId) => {
+  try {
+    return await Promise.race([
+      client.getState(),
+      sleep(sessionHealthcheckTimeoutMs).then(() => 'unresponsive')
+    ])
+  } catch (error) {
+    logger.debug({ sessionId, err: error }, 'Failed to read session state')
+    return null
+  }
+}
+
 // Function to validate if the session is ready
 const validateSession = async (sessionId) => {
   try {
@@ -23,27 +37,11 @@ const validateSession = async (sessionId) => {
     await waitForNestedObject(client, 'pupPage')
       .catch((err) => { return { success: false, state: null, message: err.message } })
 
-    // Wait for client.pupPage to be evaluable
-    let maxRetry = 0
-    while (true) {
-      try {
-        if (client.pupPage.isClosed()) {
-          return { success: false, state: null, message: 'browser tab closed' }
-        }
-        await Promise.race([
-          client.pupPage.evaluate('1'),
-          new Promise(resolve => setTimeout(resolve, 1000))
-        ])
-        break
-      } catch (error) {
-        if (maxRetry === 2) {
-          return { success: false, state: null, message: 'session closed' }
-        }
-        maxRetry++
-      }
+    if (client.pupPage.isClosed()) {
+      return { success: false, state: null, message: 'browser tab closed' }
     }
 
-    const state = await client.getState()
+    const state = await getStateWithDeadline(client, sessionId)
     returnData.state = state
     if (state !== 'CONNECTED') {
       returnData.message = 'session_not_connected'
@@ -611,17 +609,12 @@ const deleteSession = async (sessionId, validation) => {
       // Client Connected, request logout
       logger.info({ sessionId }, 'Logging out session')
       await client.logout()
-    } else if (validation.message === 'session_not_connected') {
-      // Client not Connected, request destroy
-      logger.info({ sessionId }, 'Destroying session')
-      await client.destroy()
     }
-    // Wait 10 secs for client.pupBrowser to be disconnected before deleting the folder
-    let maxDelay = 0
-    while (client.pupBrowser.isConnected() && (maxDelay < 10)) {
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      maxDelay++
-    }
+    // The browser has to go either way: logout does not close it, and matching on one exact
+    // message left it running for every unhealthy verdict other than 'session_not_connected'.
+    // hardDestroy waits for the process, so the folder is only removed once nothing holds it.
+    logger.info({ sessionId, reason: validation.message }, 'Destroying session')
+    await hardDestroy(client, sessionId)
     sessions.delete(sessionId)
     await deleteSessionFolder(sessionId)
   } catch (error) {
@@ -672,19 +665,7 @@ const probeSession = async (sessionId, client) => {
     sessionHealth.set(sessionId, health)
   }
 
-  // A wedged page never answers. Without its own deadline this probe waits out the protocol
-  // timeout, and a watchdog that hangs alongside the thing it watches is not a watchdog.
-  const unresponsive = Symbol('unresponsive')
-  let state
-  try {
-    state = await Promise.race([
-      client.getState(),
-      sleep(sessionHealthcheckTimeoutMs).then(() => unresponsive)
-    ])
-  } catch (error) {
-    logger.debug({ sessionId, err: error }, 'Session health probe threw')
-    state = null
-  }
+  const state = await getStateWithDeadline(client, sessionId)
 
   if (state === 'CONNECTED') {
     health.everConnected = true
@@ -696,8 +677,6 @@ const probeSession = async (sessionId, client) => {
   health.failures++
   if (health.failures < sessionHealthcheckFailures) { return }
 
-  const reportedState = state === unresponsive ? 'unresponsive' : state
-
   if (!health.everConnected) {
     // Either the session was never paired, or the phone logged it out. A fresh browser cannot
     // fix either one - it only throws away the QR code someone is about to scan. Say so once
@@ -705,14 +684,14 @@ const probeSession = async (sessionId, client) => {
     // unpaired settles here too instead of looping.
     if (!health.reported) {
       health.reported = true
-      logger.warn({ sessionId, state: reportedState }, 'Session is not connected and never has been, leaving it alone')
-      triggerWebhook(webhookFor(sessionId), sessionId, 'status', { msg: 'session_not_connected', state: reportedState })
-      triggerWebSocket(sessionId, 'status', { msg: 'session_not_connected', state: reportedState })
+      logger.warn({ sessionId, state }, 'Session is not connected and never has been, leaving it alone')
+      triggerWebhook(webhookFor(sessionId), sessionId, 'status', { msg: 'session_not_connected', state })
+      triggerWebSocket(sessionId, 'status', { msg: 'session_not_connected', state })
     }
     return
   }
 
-  await restartSession(sessionId, client, `health check failed ${health.failures}x, last state ${reportedState}`)
+  await restartSession(sessionId, client, `health check failed ${health.failures}x, last state ${state}`)
 }
 
 // One pass over every live session. Exported so it can be driven directly in tests.
