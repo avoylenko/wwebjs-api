@@ -156,6 +156,12 @@ const setupSession = async (sessionId) => {
         executablePath: chromeBin,
         headless,
         protocolTimeout: protocolTimeoutMs,
+        // puppeteer's own signal handlers do not close the browser, they SIGKILL its whole
+        // process group - which leaves WhatsApp Web's IndexedDB unflushed and the profile
+        // unreadable on the next boot. Shutdown is handled in server.js instead.
+        handleSIGINT: false,
+        handleSIGTERM: false,
+        handleSIGHUP: false,
         args: [
           '--autoplay-policy=user-gesture-required',
           '--disable-background-networking',
@@ -547,20 +553,8 @@ const reloadSession = async (sessionId) => {
   try {
     client.pupPage?.removeAllListeners('close')
     client.pupPage?.removeAllListeners('error')
-    try {
-      const pages = await client.pupBrowser.pages()
-      await Promise.all(pages.map((page) => page.close()))
-      await Promise.race([
-        client.pupBrowser.close(),
-        new Promise(resolve => setTimeout(resolve, 5000))
-      ])
-    } catch (e) {
-      const childProcess = client.pupBrowser.process()
-      if (childProcess) {
-        childProcess.kill(9)
-      }
-    }
     sessions.delete(sessionId)
+    await hardDestroy(client, sessionId)
     await setupSession(sessionId)
   } catch (error) {
     logger.error({ sessionId, err: error }, 'Failed to reload session')
@@ -747,6 +741,22 @@ const stopHealthChecks = () => {
   healthCheckTimer = null
 }
 
+// Closing the browsers over CDP is what lets chromium flush WhatsApp Web's IndexedDB. Skip it
+// and the next boot finds an unreadable profile and reports the session as disconnected, even
+// though nobody ever logged out.
+const shutdownSessions = async () => {
+  stopHealthChecks()
+  await Promise.all([...sessions].map(async ([sessionId, client]) => {
+    // Closing a browser closes its page, and the page-close handler is the restore path. Left
+    // alone it would launch a fresh browser on the way out of the process.
+    inTransition.add(sessionId)
+    client.pupPage?.removeAllListeners('close')
+    client.pupPage?.removeAllListeners('error')
+    await hardDestroy(client, sessionId)
+  }))
+  sessions.clear()
+}
+
 module.exports = {
   sessions,
   setupSession,
@@ -759,5 +769,6 @@ module.exports = {
   restartSession,
   runHealthChecks,
   startHealthChecks,
-  stopHealthChecks
+  stopHealthChecks,
+  shutdownSessions
 }

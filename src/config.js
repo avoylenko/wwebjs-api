@@ -32,6 +32,9 @@ const trustProxy = process.env.TRUST_PROXY ? (process.env.TRUST_PROXY).toLowerCa
 const protocolTimeoutMs = parseInt(process.env.PROTOCOL_TIMEOUT_MS) || 60000
 // How long `client.destroy()` gets to shut chromium down politely before it is killed.
 const browserDestroyTimeoutMs = parseInt(process.env.BROWSER_DESTROY_TIMEOUT_MS) || 10000
+// How long a graceful shutdown gets before the process exits anyway. Must stay under the
+// pod's terminationGracePeriodSeconds (30s by default) or kubernetes kills us mid-flush.
+const shutdownTimeoutMs = parseInt(process.env.SHUTDOWN_TIMEOUT_MS) || 20000
 // The in-process session watchdog. A container probe cannot see this: the HTTP server keeps
 // answering long after a session's browser has stopped responding, so the check has to talk
 // to the session itself. Set the interval to 0 to turn the watchdog off.
@@ -73,6 +76,7 @@ module.exports = {
   basePath,
   trustProxy,
   protocolTimeoutMs,
+  shutdownTimeoutMs,
   browserDestroyTimeoutMs,
   sessionHealthcheckIntervalMs,
   sessionHealthcheckTimeoutMs,

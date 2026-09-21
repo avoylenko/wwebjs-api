@@ -25,8 +25,9 @@ jest.mock('whatsapp-web.js', () => {
   const MockEventEmitter = require('events')
 
   class FakeClient extends MockEventEmitter {
-    constructor () {
+    constructor (options) {
       super()
+      this.options = options
       this.browserProcess = {
         killed: false,
         signal: null,
@@ -195,5 +196,80 @@ describe('session watchdog', () => {
     await settle()
 
     expect(mockClients).toHaveLength(1)
+  })
+})
+
+describe('shutdown', () => {
+  // puppeteer's own SIGTERM handler does not close the browser, it SIGKILLs the whole chromium
+  // process group - so IndexedDB never flushes and the next boot finds an unreadable profile.
+  // Taking the signal away from puppeteer is what makes a graceful shutdown possible at all.
+  it('does not let puppeteer handle termination signals', async () => {
+    await sessionsModule.setupSession('signals')
+    const { puppeteer } = mockClients[0].options
+
+    expect(puppeteer.handleSIGTERM).toBe(false)
+    expect(puppeteer.handleSIGINT).toBe(false)
+    expect(puppeteer.handleSIGHUP).toBe(false)
+  })
+
+  it('closes every session and empties the session map', async () => {
+    await sessionsModule.setupSession('one')
+    await sessionsModule.setupSession('two')
+
+    await sessionsModule.shutdownSessions()
+
+    expect(mockClients[0].destroyCalls).toBe(1)
+    expect(mockClients[1].destroyCalls).toBe(1)
+    expect(sessionsModule.sessions.size).toBe(0)
+  })
+
+  // Closing the browser closes its page, and the page-close handler is the restore path. Left
+  // alone it would launch a fresh browser on the way out of the process.
+  it('does not rebuild a session whose page closes during shutdown', async () => {
+    await sessionsModule.setupSession('leaving')
+    mockHooks.destroy = (client) => { client.pupPage.emit('close') }
+
+    await sessionsModule.shutdownSessions()
+    await settle()
+
+    expect(mockClients).toHaveLength(1)
+  })
+
+  // stopHealthChecks only stops future ticks; a pass already awaiting a probe can still come
+  // back and ask for a restart after the browsers are gone.
+  it('ignores a restart requested for a session that is shutting down', async () => {
+    await sessionsModule.setupSession('gone')
+    const client = mockClients[0]
+
+    await sessionsModule.shutdownSessions()
+    await sessionsModule.restartSession('gone', client, 'late health check pass')
+    await settle()
+
+    expect(mockClients).toHaveLength(1)
+  })
+
+  it('kills a browser that will not shut down in time', async () => {
+    await sessionsModule.setupSession('stubborn')
+    mockHooks.destroy = () => new Promise(() => {})
+
+    await sessionsModule.shutdownSessions()
+
+    expect(mockClients[0].browserProcess.signal).toBe('SIGKILL')
+  })
+})
+
+describe('manual reload', () => {
+  // reloadSession used to hand-roll its own teardown - close the pages, race pupBrowser.close,
+  // kill(9) on failure - which is hardDestroy with different constants and one more way to get
+  // it wrong. It goes through the shared path now.
+  it('kills a browser that will not close', async () => {
+    await sessionsModule.setupSession('reloaded')
+    const original = mockClients[0]
+    mockHooks.destroy = () => new Promise(() => {})
+
+    await sessionsModule.reloadSession('reloaded')
+
+    expect(original.browserProcess.signal).toBe('SIGKILL')
+    expect(mockClients).toHaveLength(2)
   })
 })
