@@ -2,7 +2,7 @@ const { Client, LocalAuth } = require('whatsapp-web.js')
 const fs = require('fs')
 const path = require('path')
 const sessions = new Map()
-const { baseWebhookURL, sessionFolderPath, maxAttachmentSize, setMessagesAsSeen, webVersion, webVersionCacheType, recoverSessions, chromeBin, headless, releaseBrowserLock, proxyUrl, proxyUsername, proxyPassword } = require('./config')
+const { baseWebhookURL, sessionFolderPath, maxAttachmentSize, setMessagesAsSeen, webVersion, webVersionCacheType, recoverSessions, chromeBin, headless, releaseBrowserLock, proxyUrl, proxyUsername, proxyPassword, protocolTimeoutMs, browserDestroyTimeoutMs, sessionHealthcheckIntervalMs, sessionHealthcheckTimeoutMs, sessionHealthcheckFailures } = require('./config')
 const { triggerWebhook, waitForNestedObject, isEventEnabled, sendMessageSeenStatus, sleep, patchWWebLibrary } = require('./utils')
 const { logger } = require('./logger')
 const { initWebSocketServer, terminateWebSocketServer, triggerWebSocket } = require('./websocket')
@@ -84,6 +84,61 @@ const restoreSessions = () => {
   }
 }
 
+// Resolves the webhook a session reports to, honouring the per-session override.
+const webhookFor = (sessionId) => process.env[sessionId.toUpperCase() + '_WEBHOOK_URL'] || baseWebhookURL
+
+// `client.destroy()` shuts the browser down over CDP, so a wedged browser hangs it forever and
+// the chromium process outlives the client that owned it. Give the polite path a deadline, then
+// take the process out directly.
+const hardDestroy = async (client, sessionId) => {
+  if (!client) { return }
+  const browserProcess = client.pupBrowser?.process?.()
+  await Promise.race([
+    Promise.resolve().then(() => client.destroy()).catch(() => {}),
+    sleep(browserDestroyTimeoutMs)
+  ])
+  if (browserProcess && !browserProcess.killed) {
+    logger.warn({ sessionId }, 'Browser did not shut down in time, killing it')
+    try {
+      browserProcess.kill('SIGKILL')
+    } catch (error) {
+      logger.error({ sessionId, err: error }, 'Failed to kill browser process')
+    }
+  }
+}
+
+// Sessions whose lifecycle is mid-flight: being rebuilt, reloaded or deleted. A crashing page
+// emits both 'close' and 'error', and the watchdog can fire on top of either, so without this
+// every crash started two setupSession runs - and since `sessions` is only written after
+// initialize() resolves, the second one sailed past the "already exists" check and put a second
+// chromium on the same profile. It also keeps the watchdog off sessions an operator is already
+// reloading or deleting.
+const inTransition = new Set()
+
+const restartSession = async (sessionId, client, reason) => {
+  const current = sessions.get(sessionId)
+  if (client && current && current !== client) {
+    // A browser left over from an earlier generation. Bury it, but leave the live one alone -
+    // restarting here is what turned one crash into a cascade of restarts.
+    logger.warn({ sessionId, reason }, 'Stale client reported a failure, discarding it')
+    await hardDestroy(client, sessionId)
+    return
+  }
+  if (inTransition.has(sessionId)) { return }
+  inTransition.add(sessionId)
+  try {
+    logger.warn({ sessionId, reason }, 'Restarting session')
+    sessions.delete(sessionId)
+    sessionHealth.delete(sessionId)
+    await hardDestroy(client || current, sessionId)
+    await setupSession(sessionId)
+  } catch (error) {
+    logger.error({ sessionId, err: error }, 'Failed to restart session')
+  } finally {
+    inTransition.delete(sessionId)
+  }
+}
+
 // Setup Session
 const setupSession = async (sessionId) => {
   try {
@@ -100,6 +155,7 @@ const setupSession = async (sessionId) => {
       puppeteer: {
         executablePath: chromeBin,
         headless,
+        protocolTimeout: protocolTimeoutMs,
         args: [
           '--autoplay-policy=user-gesture-required',
           '--disable-background-networking',
@@ -193,6 +249,9 @@ const setupSession = async (sessionId) => {
       await client.initialize()
     } catch (error) {
       logger.error({ sessionId, err: error }, 'Initialize error')
+      // The client never reached `sessions`, so nothing else holds a reference to its browser.
+      // Without this every failed restore left a chromium process behind.
+      await hardDestroy(client, sessionId)
       throw error
     }
 
@@ -206,24 +265,17 @@ const setupSession = async (sessionId) => {
 
 const initializeEvents = (client, sessionId) => {
   // check if the session webhook is overridden
-  const sessionWebhook = process.env[sessionId.toUpperCase() + '_WEBHOOK_URL'] || baseWebhookURL
+  const sessionWebhook = webhookFor(sessionId)
 
   if (recoverSessions) {
     waitForNestedObject(client, 'pupPage').then(() => {
-      const restartSession = async (sessionId) => {
-        sessions.delete(sessionId)
-        await client.destroy().catch(e => { })
-        await setupSession(sessionId)
-      }
       client.pupPage.once('close', function () {
         // emitted when the page closes
-        logger.warn({ sessionId }, 'Browser page closed. Restoring')
-        restartSession(sessionId)
+        restartSession(sessionId, client, 'browser page closed')
       })
       client.pupPage.once('error', function () {
         // emitted when the page crashes
-        logger.warn({ sessionId }, 'Error occurred on browser page. Restoring')
-        restartSession(sessionId)
+        restartSession(sessionId, client, 'error on browser page')
       })
       client.pupPage
         .on('console', message => {
@@ -481,11 +533,18 @@ const deleteSessionFolder = async (sessionId) => {
 
 // Function to reload client session without removing browser cache
 const reloadSession = async (sessionId) => {
+  const client = sessions.get(sessionId)
+  if (!client) {
+    return
+  }
+  // An automatic restart is already rebuilding this one. Stacking a manual reload on top is the
+  // same double-launch the rest of this module exists to prevent.
+  if (inTransition.has(sessionId)) {
+    logger.warn({ sessionId }, 'Session is already being rebuilt, skipping reload')
+    return
+  }
+  inTransition.add(sessionId)
   try {
-    const client = sessions.get(sessionId)
-    if (!client) {
-      return
-    }
     client.pupPage?.removeAllListeners('close')
     client.pupPage?.removeAllListeners('error')
     try {
@@ -506,6 +565,8 @@ const reloadSession = async (sessionId) => {
   } catch (error) {
     logger.error({ sessionId, err: error }, 'Failed to reload session')
     throw error
+  } finally {
+    inTransition.delete(sessionId)
   }
 }
 
@@ -537,11 +598,14 @@ const destroySession = async (sessionId) => {
 }
 
 const deleteSession = async (sessionId, validation) => {
+  const client = sessions.get(sessionId)
+  if (!client) {
+    return
+  }
+  // Unlike a reload, a delete always wins - it only has to stay invisible to the watchdog while
+  // the session sits in the Map waiting for its browser to go away.
+  inTransition.add(sessionId)
   try {
-    const client = sessions.get(sessionId)
-    if (!client) {
-      return
-    }
     client.pupPage?.removeAllListeners('close')
     client.pupPage?.removeAllListeners('error')
     try {
@@ -569,6 +633,8 @@ const deleteSession = async (sessionId, validation) => {
   } catch (error) {
     logger.error({ sessionId, err: error }, 'Failed to delete session')
     throw error
+  } finally {
+    inTransition.delete(sessionId)
   }
 }
 
@@ -595,6 +661,92 @@ const flushSessions = async (deleteOnlyInactive) => {
   }
 }
 
+// The in-process session watchdog.
+//
+// A container liveness probe is the wrong instrument here: Express keeps answering /ping long
+// after a session's browser has stopped responding, so the probe reports a healthy pod wrapped
+// around a dead WhatsApp session. The only check worth anything is one that talks to the
+// session itself, and the only repair worth anything rebuilds that one session rather than
+// restarting the whole process and every other session with it.
+const sessionHealth = new Map()
+let healthCheckTimer = null
+
+const probeSession = async (sessionId, client) => {
+  let health = sessionHealth.get(sessionId)
+  if (!health) {
+    health = { failures: 0, everConnected: false, reported: false }
+    sessionHealth.set(sessionId, health)
+  }
+
+  // A wedged page never answers. Without its own deadline this probe waits out the protocol
+  // timeout, and a watchdog that hangs alongside the thing it watches is not a watchdog.
+  const unresponsive = Symbol('unresponsive')
+  let state
+  try {
+    state = await Promise.race([
+      client.getState(),
+      sleep(sessionHealthcheckTimeoutMs).then(() => unresponsive)
+    ])
+  } catch (error) {
+    logger.debug({ sessionId, err: error }, 'Session health probe threw')
+    state = null
+  }
+
+  if (state === 'CONNECTED') {
+    health.everConnected = true
+    health.failures = 0
+    health.reported = false
+    return
+  }
+
+  health.failures++
+  if (health.failures < sessionHealthcheckFailures) { return }
+
+  const reportedState = state === unresponsive ? 'unresponsive' : state
+
+  if (!health.everConnected) {
+    // Either the session was never paired, or the phone logged it out. A fresh browser cannot
+    // fix either one - it only throws away the QR code someone is about to scan. Say so once
+    // and leave it alone. The flag is cleared on restart, so a session that comes back up
+    // unpaired settles here too instead of looping.
+    if (!health.reported) {
+      health.reported = true
+      logger.warn({ sessionId, state: reportedState }, 'Session is not connected and never has been, leaving it alone')
+      triggerWebhook(webhookFor(sessionId), sessionId, 'status', { msg: 'session_not_connected', state: reportedState })
+      triggerWebSocket(sessionId, 'status', { msg: 'session_not_connected', state: reportedState })
+    }
+    return
+  }
+
+  await restartSession(sessionId, client, `health check failed ${health.failures}x, last state ${reportedState}`)
+}
+
+// One pass over every live session. Exported so it can be driven directly in tests.
+const runHealthChecks = async () => {
+  for (const sessionId of [...sessionHealth.keys()]) {
+    if (!sessions.has(sessionId)) { sessionHealth.delete(sessionId) }
+  }
+  for (const [sessionId, client] of [...sessions]) {
+    if (inTransition.has(sessionId)) { continue }
+    await probeSession(sessionId, client)
+  }
+}
+
+const startHealthChecks = () => {
+  if (healthCheckTimer || sessionHealthcheckIntervalMs <= 0) { return }
+  healthCheckTimer = setInterval(() => {
+    runHealthChecks().catch((error) => logger.error({ err: error }, 'Session health check pass failed'))
+  }, sessionHealthcheckIntervalMs)
+  healthCheckTimer.unref?.()
+  logger.info({ intervalMs: sessionHealthcheckIntervalMs, failuresBeforeRestart: sessionHealthcheckFailures }, 'Session health checks enabled')
+}
+
+const stopHealthChecks = () => {
+  if (!healthCheckTimer) { return }
+  clearInterval(healthCheckTimer)
+  healthCheckTimer = null
+}
+
 module.exports = {
   sessions,
   setupSession,
@@ -603,5 +755,9 @@ module.exports = {
   deleteSession,
   reloadSession,
   flushSessions,
-  destroySession
+  destroySession,
+  restartSession,
+  runHealthChecks,
+  startHealthChecks,
+  stopHealthChecks
 }

@@ -2,7 +2,7 @@ const app = require('./src/app')
 const { servicePort, baseWebhookURL, enableWebHook, enableWebSocket, autoStartSessions } = require('./src/config')
 const { logger } = require('./src/logger')
 const { handleUpgrade } = require('./src/websocket')
-const { restoreSessions } = require('./src/sessions')
+const { restoreSessions, startHealthChecks } = require('./src/sessions')
 
 // Check if BASE_WEBHOOK_URL environment variable is available when WebHook is enabled
 if (!baseWebhookURL && enableWebHook) {
@@ -17,6 +17,7 @@ const server = app.listen(servicePort, () => {
     logger.info('Starting all sessions')
     restoreSessions()
   }
+  startHealthChecks()
 })
 
 if (enableWebSocket) {
