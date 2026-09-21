@@ -29,11 +29,10 @@ jest.mock('whatsapp-web.js', () => {
       super()
       this.options = options
       this.browserProcess = {
-        killed: false,
-        signal: null,
+        exitCode: null,
+        signalCode: null,
         kill (signal) {
-          this.killed = true
-          this.signal = signal
+          this.signalCode = signal
         }
       }
       this.pupPage = new MockEventEmitter()
@@ -51,7 +50,9 @@ jest.mock('whatsapp-web.js', () => {
 
     async destroy () {
       this.destroyCalls++
-      return mockHooks.destroy ? mockHooks.destroy(this) : undefined
+      if (mockHooks.destroy) { await mockHooks.destroy(this) }
+      // The real destroy() awaits the browser process exiting before it resolves.
+      this.browserProcess.exitCode = 0
     }
 
     async getState () {
@@ -118,7 +119,7 @@ describe('browser teardown', () => {
 
     expect(result.success).toBe(false)
     expect(mockClients[0].destroyCalls).toBe(1)
-    expect(mockClients[0].browserProcess.signal).toBe('SIGKILL')
+    expect(mockClients[0].browserProcess.signalCode).toBe('SIGKILL')
   })
 })
 
@@ -253,13 +254,24 @@ describe('shutdown', () => {
     expect(mockClients).toHaveLength(1)
   })
 
+  // The missing half of the SIGKILL tests: every one of them checked that the fallback fires,
+  // none checked that it stays out of the way. That gap hid a `killed` check that is false
+  // after a clean shutdown, so a browser that closed properly got shot anyway.
+  it('leaves a browser that shut down cleanly alone', async () => {
+    await sessionsModule.setupSession('tidy')
+
+    await sessionsModule.shutdownSessions()
+
+    expect(mockClients[0].browserProcess.signalCode).toBeNull()
+  })
+
   it('kills a browser that will not shut down in time', async () => {
     await sessionsModule.setupSession('stubborn')
     mockHooks.destroy = () => new Promise(() => {})
 
     await sessionsModule.shutdownSessions()
 
-    expect(mockClients[0].browserProcess.signal).toBe('SIGKILL')
+    expect(mockClients[0].browserProcess.signalCode).toBe('SIGKILL')
   })
 })
 
@@ -274,7 +286,7 @@ describe('manual reload', () => {
 
     await sessionsModule.reloadSession('reloaded')
 
-    expect(original.browserProcess.signal).toBe('SIGKILL')
+    expect(original.browserProcess.signalCode).toBe('SIGKILL')
     expect(mockClients).toHaveLength(2)
   })
 })

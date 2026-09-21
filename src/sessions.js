@@ -88,6 +88,11 @@ const webhookFor = (sessionId) => process.env[sessionId.toUpperCase() + '_WEBHOO
 // `client.destroy()` shuts the browser down over CDP, so a wedged browser hangs it forever and
 // the chromium process outlives the client that owned it. Give the polite path a deadline, then
 // take the process out directly.
+// `killed` on a ChildProcess means "a signal was delivered", not "the process is gone", so it
+// stays false after a perfectly clean shutdown. Exit status is the only honest answer.
+const hasExited = (browserProcess) =>
+  browserProcess.exitCode !== null || browserProcess.signalCode !== null
+
 const hardDestroy = async (client, sessionId) => {
   if (!client) { return }
   const browserProcess = client.pupBrowser?.process?.()
@@ -95,7 +100,7 @@ const hardDestroy = async (client, sessionId) => {
     Promise.resolve().then(() => client.destroy()).catch(() => {}),
     sleep(browserDestroyTimeoutMs)
   ])
-  if (browserProcess && !browserProcess.killed) {
+  if (browserProcess && !hasExited(browserProcess)) {
     logger.warn({ sessionId }, 'Browser did not shut down in time, killing it')
     try {
       browserProcess.kill('SIGKILL')
