@@ -1,5 +1,5 @@
 # Use the official Node.js Debian image as the base image
-FROM node:22-bookworm-slim AS base
+FROM node:24-bookworm-slim AS base
 
 ENV CHROME_BIN="/usr/bin/chromium" \
     PUPPETEER_EXECUTABLE_PATH="/usr/bin/chromium" \
