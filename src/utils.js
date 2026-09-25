@@ -472,6 +472,24 @@ const patchWWebLibrary = async (client, sessionId) => {
         filteredChats.map(chat => window.WWebJS.getChatModel(chat))
       )
     }
+
+    // hotfix for https://github.com/wwebjs/whatsapp-web.js/pull/201923: sendMessage spreads the
+    // MediaData model into the outgoing Msg, and its private `__x_id` breaks Msg initialization.
+    // Hiding it from spread keeps the model itself intact.
+    if (!window.__wwebjsApiMediaIdFix) {
+      for (const name of ['processMediaData', 'processStickerData']) {
+        const process = window.WWebJS[name]
+        if (typeof process !== 'function') { continue }
+        window.WWebJS[name] = async function (...args) {
+          const data = await process.apply(this, args)
+          if (data && Object.prototype.hasOwnProperty.call(data, '__x_id')) {
+            Object.defineProperty(data, '__x_id', { enumerable: false })
+          }
+          return data
+        }
+      }
+      window.__wwebjsApiMediaIdFix = true
+    }
   })
 }
 
