@@ -1,6 +1,6 @@
 const qr = require('qr-image')
 const { setupSession, deleteSession, reloadSession, validateSession, flushSessions, destroySession, sessions } = require('../sessions')
-const { sendErrorResponse, waitForNestedObject, exposeFunctionIfAbsent } = require('../utils')
+const { sendErrorResponse, waitForNestedObject } = require('../utils')
 const { logger } = require('../logger')
 
 /**
@@ -366,17 +366,19 @@ const requestPairingCode = async (req, res) => {
   const sessionId = req.params.sessionId
   try {
     const { phoneNumber, showNotification = true } = req.body
-    const client = sessions.get(sessionId)
-    if (!client) {
+    if (!sessions.has(sessionId)) {
       return res.json({ success: false, message: 'session_not_found' })
     }
-    // hotfix https://github.com/pedroslopez/whatsapp-web.js/pull/3706
-    await exposeFunctionIfAbsent(client.pupPage, 'onCodeReceivedEvent', async (code) => {
-      client.emit('code', code)
-      return code
+    await destroySession(sessionId)
+    const setupResult = await setupSession(sessionId, {
+      phoneNumber,
+      showNotification,
+      intervalMs: 180000
     })
-    const result = await client.requestPairingCode(phoneNumber, showNotification)
-    res.json({ success: true, result })
+    if (!setupResult.success) {
+      return sendErrorResponse(res, 422, setupResult.message)
+    }
+    res.json({ success: true, result: setupResult.pairingCode })
   } catch (error) {
     logger.error({ sessionId, err: error }, 'Failed to request pairing code')
     res.status(500).json({ success: false, error: error.message })

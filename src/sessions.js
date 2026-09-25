@@ -85,7 +85,7 @@ const restoreSessions = () => {
 }
 
 // Setup Session
-const setupSession = async (sessionId) => {
+const setupSession = async (sessionId, pairWithPhoneNumber) => {
   try {
     if (sessions.has(sessionId)) {
       return { success: false, message: `Session already exists for: ${sessionId}`, client: sessions.get(sessionId) }
@@ -146,6 +146,10 @@ const setupSession = async (sessionId) => {
       authStrategy: localAuth
     }
 
+    if (pairWithPhoneNumber) {
+      clientOptions.pairWithPhoneNumber = pairWithPhoneNumber
+    }
+
     if (proxyUrl && proxyUsername != null && proxyPassword != null) {
       clientOptions.proxyAuthentication = { username: proxyUsername, password: proxyPassword }
     }
@@ -172,6 +176,9 @@ const setupSession = async (sessionId) => {
     }
 
     const client = new Client(clientOptions)
+    const pairingCode = pairWithPhoneNumber
+      ? new Promise((resolve) => client.once('code', resolve))
+      : null
     if (releaseBrowserLock) {
       // See https://github.com/puppeteer/puppeteer/issues/4860
       const singletonLockPath = path.resolve(path.join(sessionFolderPath, `session-${sessionId}`, 'SingletonLock'))
@@ -198,7 +205,12 @@ const setupSession = async (sessionId) => {
 
     // Save the session to the Map
     sessions.set(sessionId, client)
-    return { success: true, message: 'Session initiated successfully', client }
+    return {
+      success: true,
+      message: 'Session initiated successfully',
+      client,
+      pairingCode: pairingCode ? await pairingCode : null
+    }
   } catch (error) {
     return { success: false, message: error.message, client: null }
   }
