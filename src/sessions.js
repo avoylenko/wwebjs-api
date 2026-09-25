@@ -232,11 +232,15 @@ const initializeEvents = (client, sessionId) => {
         })
         .on('requestfailed', request => {
           const failure = request.failure()
-          if (failure) {
-            logger.error({ sessionId, url: request.url() }, `Page request failed: ${failure.errorText}`)
-          } else {
+          if (!failure) {
             logger.error({ sessionId, url: request.url() }, 'Page request failed but no failure reason provided')
+            return
           }
+          // WhatsApp Web aborts its own long-poll requests as a matter of course. In a four day
+          // production log these were 403 lines out of 492, which buries everything worth
+          // reading, so they are reported at debug and real failures keep the error level.
+          const level = failure.errorText === 'net::ERR_ABORTED' ? 'debug' : 'error'
+          logger[level]({ sessionId, url: request.url() }, `Page request failed: ${failure.errorText}`)
         })
         .on('pageerror', ({ message }) => logger.error({ sessionId, message }, 'Page error occurred'))
     }).catch(e => { })
