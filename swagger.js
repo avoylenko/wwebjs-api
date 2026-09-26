@@ -84,4 +84,8 @@ const doc = {
   }
 }
 
-swaggerAutogen(outputFile, endpointsFiles, doc)
+swaggerAutogen(outputFile, endpointsFiles, doc).then(({ data }) => {
+  // startSession shares one handler for GET and POST, but only POST takes a body
+  delete data.paths['/session/start/{sessionId}'].get.requestBody
+  require('fs').writeFileSync(outputFile, JSON.stringify(data, null, 2))
+})

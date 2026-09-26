@@ -26,7 +26,7 @@ const isValidWebhookUrl = (value) => {
  */
 const startSession = async (req, res) => {
   // #swagger.summary = 'Start new session'
-  // #swagger.description = 'Starts a session for the given session ID. Optionally accepts a webhookUrl in the request body (POST) to configure a per-session webhook.'
+  // #swagger.description = 'Starts a session for the given session ID. POST optionally accepts a webhookUrl in the body to configure a per-session webhook (null or empty string clears a saved one).'
   /*
     #swagger.requestBody = {
       required: false,
@@ -118,6 +118,10 @@ const setWebhook = async (req, res) => {
   const sessionId = req.params.sessionId
   try {
     if (!req.body || !('webhookUrl' in req.body)) {
+      /* #swagger.responses[400] = {
+        description: "Missing or invalid webhookUrl."
+      }
+      */
       return sendErrorResponse(res, 400, 'webhookUrl is required (send null or empty string to clear)')
     }
     const { webhookUrl } = req.body
@@ -126,6 +130,10 @@ const setWebhook = async (req, res) => {
     }
     const result = await setSessionWebhook(sessionId, webhookUrl)
     if (!result.success) {
+      /* #swagger.responses[404] = {
+        description: "Session not found."
+      }
+      */
       return sendErrorResponse(res, 404, result.message)
     }
     /* #swagger.responses[200] = {
@@ -168,6 +176,10 @@ const getWebhook = async (req, res) => {
   try {
     const result = getSessionWebhook(sessionId)
     if (!result.success) {
+      /* #swagger.responses[404] = {
+        description: "Session not found (only started sessions are reported)."
+      }
+      */
       return sendErrorResponse(res, 404, result.message)
     }
     /* #swagger.responses[200] = {

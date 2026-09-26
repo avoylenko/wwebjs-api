@@ -158,7 +158,7 @@
           "Session"
         ],
         "summary": "Start new session",
-        "description": "Starts a session for the given session ID. Optionally accepts a webhookUrl in the request body (POST) to configure a per-session webhook.",
+        "description": "Starts a session for the given session ID. POST optionally accepts a webhookUrl in the body to configure a per-session webhook (null or empty string clears a saved one).",
         "parameters": [
           {
             "name": "sessionId",
@@ -220,43 +220,14 @@
           {
             "apiKeyAuth": []
           }
-        ],
-        "requestBody": {
-          "required": false,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "webhookUrl": {
-                    "type": "string",
-                    "description": "Optional webhook URL for this session. Overrides BASE_WEBHOOK_URL and session env var.",
-                    "example": "https://your-server.com/webhook/my-session"
-                  }
-                }
-              }
-            },
-            "application/xml": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "webhookUrl": {
-                    "type": "string",
-                    "description": "Optional webhook URL for this session. Overrides BASE_WEBHOOK_URL and session env var.",
-                    "example": "https://your-server.com/webhook/my-session"
-                  }
-                }
-              }
-            }
-          }
-        }
+        ]
       },
       "post": {
         "tags": [
           "Session"
         ],
         "summary": "Start new session",
-        "description": "Starts a session for the given session ID. Optionally accepts a webhookUrl in the request body (POST) to configure a per-session webhook.",
+        "description": "Starts a session for the given session ID. POST optionally accepts a webhookUrl in the body to configure a per-session webhook (null or empty string clears a saved one).",
         "parameters": [
           {
             "name": "sessionId",
@@ -1044,6 +1015,9 @@
               }
             }
           },
+          "400": {
+            "description": "Missing or invalid webhookUrl."
+          },
           "403": {
             "description": "Forbidden.",
             "content": {
@@ -1053,6 +1027,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Session not found."
           },
           "422": {
             "description": "Unprocessable Entity.",
@@ -1167,6 +1144,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Session not found (only started sessions are reported)."
           },
           "422": {
             "description": "Unprocessable Entity.",

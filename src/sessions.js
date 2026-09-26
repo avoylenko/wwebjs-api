@@ -272,12 +272,16 @@ const getSessionWebhook = (sessionId) => {
   if (!client) {
     return { success: false, message: 'session_not_found' }
   }
+  return { success: true, ...resolveWebhookUrl(client, sessionId) }
+}
+
+// Priority: runtime webhookUrl > session env var > global env var
+const resolveWebhookUrl = (client, sessionId) => {
   const envWebhook = process.env[sessionId.toUpperCase() + '_WEBHOOK_URL']
-  return {
-    success: true,
-    webhookUrl: client.webhookUrl || envWebhook || baseWebhookURL || null,
-    source: client.webhookUrl ? 'runtime' : (envWebhook ? 'env_session' : (baseWebhookURL ? 'env_global' : 'none'))
-  }
+  if (client.webhookUrl) return { webhookUrl: client.webhookUrl, source: 'runtime' }
+  if (envWebhook) return { webhookUrl: envWebhook, source: 'env_session' }
+  if (baseWebhookURL) return { webhookUrl: baseWebhookURL, source: 'env_global' }
+  return { webhookUrl: null, source: 'none' }
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -285,10 +289,7 @@ const getSessionWebhook = (sessionId) => {
 // ═══════════════════════════════════════════════════════════════════
 
 const initializeEvents = (client, sessionId) => {
-  // Priority: runtime webhookUrl > session env var > global env var
-  const getWebhookUrl = () => {
-    return client.webhookUrl || process.env[sessionId.toUpperCase() + '_WEBHOOK_URL'] || baseWebhookURL
-  }
+  const getWebhookUrl = () => resolveWebhookUrl(client, sessionId).webhookUrl
 
   if (recoverSessions) {
     waitForNestedObject(client, 'pupPage').then(() => {
