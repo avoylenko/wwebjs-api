@@ -15,25 +15,16 @@ const getWebhookConfigPath = (sessionId) => {
   return path.join(sessionFolderPath, `session-${sessionId}`, 'webhook_config.json')
 }
 
+// Throws on failure so callers don't report a change that won't survive a restart
 const saveWebhookConfig = async (sessionId, webhookUrl) => {
-  try {
-    const configPath = getWebhookConfigPath(sessionId)
-    const dirPath = path.dirname(configPath)
-    if (!fs.existsSync(dirPath)) {
-      return // Session folder doesn't exist yet, will be saved after session starts
-    }
-    if (webhookUrl) {
-      await fs.promises.writeFile(configPath, JSON.stringify({ webhookUrl }, null, 2))
-      logger.debug({ sessionId }, 'Webhook config saved to disk')
-    } else {
-      // Clear the config file if webhookUrl is null/empty
-      if (fs.existsSync(configPath)) {
-        await fs.promises.unlink(configPath)
-        logger.debug({ sessionId }, 'Webhook config removed from disk')
-      }
-    }
-  } catch (error) {
-    logger.error({ sessionId, err: error }, 'Failed to save webhook config')
+  const configPath = getWebhookConfigPath(sessionId)
+  if (webhookUrl) {
+    await fs.promises.writeFile(configPath, JSON.stringify({ webhookUrl }, null, 2))
+    logger.debug({ sessionId }, 'Webhook config saved to disk')
+  } else {
+    // Clear the config file if webhookUrl is null/empty
+    await fs.promises.rm(configPath, { force: true })
+    logger.debug({ sessionId }, 'Webhook config removed from disk')
   }
 }
 
@@ -221,8 +212,8 @@ const setupSession = async (sessionId, options = {}) => {
 
     const client = new Client(clientOptions)
 
-    // Webhook URL provided via API takes precedence over the one persisted on disk
-    client.webhookUrl = options.webhookUrl || loadWebhookConfig(sessionId)
+    // Webhook URL provided via API (null/empty clears it) takes precedence over the one persisted on disk
+    client.webhookUrl = options.webhookUrl !== undefined ? (options.webhookUrl || null) : loadWebhookConfig(sessionId)
 
     if (releaseBrowserLock) {
       // See https://github.com/puppeteer/puppeteer/issues/4860
@@ -244,8 +235,10 @@ const setupSession = async (sessionId, options = {}) => {
       initializeEvents(client, sessionId)
       await client.initialize()
       // Session folder exists after initialize, persist webhook config so it survives restarts
-      if (options.webhookUrl) {
-        await saveWebhookConfig(sessionId, options.webhookUrl)
+      if (options.webhookUrl !== undefined) {
+        await saveWebhookConfig(sessionId, client.webhookUrl).catch((err) => {
+          logger.error({ sessionId, err }, 'Failed to save webhook config')
+        })
       }
     } catch (error) {
       logger.error({ sessionId, err: error }, 'Initialize error')
@@ -270,9 +263,9 @@ const setSessionWebhook = async (sessionId, webhookUrl) => {
   if (!client) {
     return { success: false, message: 'session_not_found' }
   }
+  // Persist to disk first so it survives server restarts; a failed write leaves the current URL untouched
+  await saveWebhookConfig(sessionId, webhookUrl)
   client.webhookUrl = webhookUrl || null
-  // Persist to disk so it survives server restarts
-  await saveWebhookConfig(sessionId, client.webhookUrl)
   logger.info({ sessionId, cleared: !client.webhookUrl }, 'Session webhook URL updated')
   return { success: true, message: 'Webhook URL updated successfully', webhookUrl: client.webhookUrl }
 }

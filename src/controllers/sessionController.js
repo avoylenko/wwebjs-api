@@ -3,7 +3,7 @@ const { setupSession, deleteSession, reloadSession, validateSession, flushSessio
 const { sendErrorResponse, waitForNestedObject, exposeFunctionIfAbsent } = require('../utils')
 const { logger } = require('../logger')
 
-// Webhook URLs are server-side request targets, so accept only absolute http(s) URLs
+// Accept only absolute http(s) URLs. Private/loopback hosts are allowed on purpose (e.g. local n8n), like BASE_WEBHOOK_URL
 const isValidWebhookUrl = (value) => {
   try {
     return typeof value === 'string' && ['http:', 'https:'].includes(new URL(value).protocol)

@@ -140,6 +140,13 @@ describe('Session webhook Tests', () => {
     const response7 = await request(app).get('/session/getWebhook/6').set('x-api-key', 'test_api_key')
     expect(response7.body).toEqual({ success: true, webhookUrl: process.env.BASE_WEBHOOK_URL, source: 'env_global' })
 
+    // restart with an explicit null must not pick up the URL persisted on disk
+    await request(app).put('/session/setWebhook/6').set('x-api-key', 'test_api_key').send({ webhookUrl: 'http://127.0.0.1:9/c' })
+    await request(app).get('/session/stop/6').set('x-api-key', 'test_api_key')
+    const response9 = await request(app).post('/session/start/6').set('x-api-key', 'test_api_key').send({ webhookUrl: null })
+    expect(response9.status).toBe(200)
+    expect(fs.existsSync(configPath)).toBe(false)
+
     const response8 = await request(app).get('/session/terminate/6').set('x-api-key', 'test_api_key')
     expect(response8.status).toBe(200)
   })
