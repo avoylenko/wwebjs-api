@@ -15,8 +15,8 @@ const { sendErrorResponse, decodeBase64 } = require('../utils')
  */
 const _getMessageById = async (client, messageId, chatId) => {
   const chat = await client.getChatById(chatId)
-  const messages = await chat.fetchMessages({ limit: 100 })
-  return messages.find((message) => { return message.id.id === messageId })
+  const messages = await chat.fetchMessages({ messageId: messageId, limit: 1 })
+  return messages[0]
 }
 
 /**
@@ -41,7 +41,7 @@ const getClassInfo = async (req, res) => {
     if (!message) { throw new Error('Message not found') }
     res.json({ success: true, message })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -97,7 +97,7 @@ const deleteMessage = async (req, res) => {
     const result = await message.delete(everyone, clearMedia)
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -126,7 +126,7 @@ const downloadMedia = async (req, res) => {
     const messageMedia = await message.downloadMedia()
     res.json({ success: true, messageMedia })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -174,7 +174,7 @@ const downloadMediaAsData = async (req, res) => {
     })
     readableStream.pipe(res)
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -187,7 +187,6 @@ const downloadMediaAsData = async (req, res) => {
  * @param {string} req.body.messageId - The ID of the message to forward.
  * @param {string} req.body.chatId - The ID of the chat that contains the message to forward.
  * @param {string} req.body.destinationChatId - The ID of the chat to forward the message to.
- * @param {string} req.params.sessionId - The ID of the session to use the Telegram API with.
  * @param {Object} res - The response object to be sent back to the client.
  * @returns {Object} - The response object with a JSON body containing the result of the forward operation.
  * @throws Will throw an error if the message is not found or if there is an error during the forward operation.
@@ -227,7 +226,7 @@ const forward = async (req, res) => {
     const result = await message.forward(destinationChatId)
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -239,7 +238,6 @@ const forward = async (req, res) => {
  * @param {Object} req.body - The body of the request object.
  * @param {string} req.body.messageId - The ID of the message to get information about.
  * @param {string} req.body.chatId - The ID of the chat that contains the message to get information about.
- * @param {string} req.params.sessionId - The ID of the session to use the Telegram API with.
  * @param {Object} res - The response object to be sent back to the client.
  * @returns {Object} - The response object with a JSON body containing the information about the message.
  * @throws Will throw an error if the message is not found or if there is an error during the get info operation.
@@ -257,7 +255,7 @@ const getInfo = async (req, res) => {
     const info = await message.getInfo()
     res.json({ success: true, info })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -287,7 +285,7 @@ const getMentions = async (req, res) => {
     const contacts = await message.getMentions()
     res.json({ success: true, contacts })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -317,7 +315,7 @@ const getOrder = async (req, res) => {
     const order = await message.getOrder()
     res.json({ success: true, order })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -347,7 +345,7 @@ const getPayment = async (req, res) => {
     const payment = await message.getPayment()
     res.json({ success: true, payment })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -377,7 +375,7 @@ const getQuotedMessage = async (req, res) => {
     const quotedMessage = await message.getQuotedMessage()
     res.json({ success: true, quotedMessage })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -431,7 +429,7 @@ const react = async (req, res) => {
     const result = await message.react(reaction)
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -521,7 +519,10 @@ const reply = async (req, res) => {
         break
       }
       case 'Contact': {
-        const contactId = content.contactId.endsWith('@c.us') ? content.contactId : `${content.contactId}@c.us`
+        const contactId =
+          content.contactId.endsWith('@c.us') || content.contactId.endsWith('@lid')
+            ? content.contactId
+            : `${content.contactId}@c.us`
         contentMessage = await client.getContactById(contactId)
         break
       }
@@ -537,7 +538,7 @@ const reply = async (req, res) => {
     const repliedMessage = await message.reply(contentMessage, chatId, options)
     res.json({ success: true, repliedMessage })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -565,7 +566,7 @@ const star = async (req, res) => {
     const result = await message.star()
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -593,7 +594,7 @@ const unstar = async (req, res) => {
     const result = await message.unstar()
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -621,7 +622,7 @@ const getReactions = async (req, res) => {
     const result = await message.getReactions()
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -649,7 +650,7 @@ const getGroupMentions = async (req, res) => {
     const result = await message.getGroupMentions()
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -703,7 +704,7 @@ const edit = async (req, res) => {
     const editedMessage = await message.edit(content, options)
     res.json({ success: true, message: editedMessage })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -716,7 +717,7 @@ const edit = async (req, res) => {
  * @param {string} req.params.sessionId - The session ID.
  * @param {string} req.body.messageId - The message ID.
  * @param {string} req.body.chatId - The chat ID.
- * @returns {Promise} A Promise that resolves with the result of the message.getReactions() call.
+ * @returns {Promise} A Promise that resolves with the result of the message.getContact() call.
  * @throws {Error} If message is not found, it throws an error with the message "Message not found".
  */
 const getContact = async (req, res) => {
@@ -731,7 +732,36 @@ const getContact = async (req, res) => {
     const contact = await message.getContact()
     res.json({ success: true, contact })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
+  }
+}
+
+/**
+ * Gets vote results for a message with a poll.
+ * @async
+ * @function getPollVotes
+ * @param {Object} req - The request object received by the server.
+ * @param {Object} req.body - The body of the request object.
+ * @param {string} req.body.messageId - The ID of the message to get information about.
+ * @param {string} req.body.chatId - The ID of the chat that contains the message to get information about.
+ * @param {Object} res - The response object to be sent back to the client.
+ * @returns {Object} - The response object with a JSON body containing the poll results.
+ * @throws Will throw an error if the message is not found or if there is an error during the get poll votes operation.
+ */
+const getPollVotes = async (req, res) => {
+  /*
+    #swagger.summary = 'Get poll vote results for a message with a poll'
+    #swagger.description = 'May return null if the message does not exist or is not a poll.'
+  */
+  try {
+    const { messageId, chatId } = req.body
+    const client = sessions.get(req.params.sessionId)
+    const message = await _getMessageById(client, messageId, chatId)
+    if (!message) { throw new Error('Message not found') }
+    const votes = await message.getPollVotes()
+    res.json({ success: true, votes })
+  } catch (error) {
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -793,7 +823,7 @@ const runMethod = async (req, res) => {
     const result = options ? await message[method](options) : await message[method]()
     res.json({ success: true, data: result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -816,5 +846,6 @@ module.exports = {
   getGroupMentions,
   edit,
   getContact,
+  getPollVotes,
   runMethod
 }

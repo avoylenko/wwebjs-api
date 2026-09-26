@@ -60,7 +60,7 @@ const handleUpgrade = (request, socket, head) => {
   const wsPath = basePath ? `${basePath}/ws/` : '/ws/'
   if (pathname.startsWith(wsPath)) {
     const pathParts = pathname.split('/')
-    const sessionId = basePath ? pathParts[3] : pathParts[2]
+    const sessionId = pathParts[pathParts.length - 1]
     const server = wssMap.get(sessionId)
     if (server) {
       server.handleUpgrade(request, socket, head, (ws) => {

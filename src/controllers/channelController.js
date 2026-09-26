@@ -45,7 +45,7 @@ const getClassInfo = async (req, res) => {
     }
     res.json({ success: true, channel: chat })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -137,7 +137,7 @@ const sendMessage = async (req, res) => {
     }
     res.json({ success: true, message: messageOut })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -196,7 +196,7 @@ const fetchMessages = async (req, res) => {
     const messages = Object.keys(searchOptions).length ? await chat.fetchMessages(searchOptions) : await chat.fetchMessages()
     res.json({ success: true, messages })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -244,7 +244,7 @@ const sendSeen = async (req, res) => {
     const result = await chat.sendSeen()
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -292,7 +292,7 @@ const mute = async (req, res) => {
     const result = await chat.mute()
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -340,7 +340,7 @@ const unmute = async (req, res) => {
     const result = await chat.unmute()
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -393,7 +393,7 @@ const setSubject = async (req, res) => {
     const result = await chat.setSubject(newSubject)
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -441,7 +441,7 @@ const acceptChannelAdminInvite = async (req, res) => {
     const result = await chat.acceptChannelAdminInvite()
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -499,7 +499,7 @@ const sendChannelAdminInvite = async (req, res) => {
     const result = options ? await chat.sendChannelAdminInvite(userId, options) : await chat.sendChannelAdminInvite(userId)
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -552,7 +552,7 @@ const demoteChannelAdmin = async (req, res) => {
     const result = await chat.demoteChannelAdmin(userId)
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -611,7 +611,7 @@ const transferChannelOwnership = async (req, res) => {
     const result = options ? await chat.transferChannelOwnership(newOwnerId, options) : await chat.transferChannelOwnership(newOwnerId)
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -664,7 +664,7 @@ const revokeChannelAdminInvite = async (req, res) => {
     const result = await chat.revokeChannelAdminInvite(userId)
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -717,7 +717,7 @@ const getSubscribers = async (req, res) => {
     const result = await chat.getSubscribers(limit)
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -765,7 +765,7 @@ const deleteChannel = async (req, res) => {
     const result = await chat.deleteChannel()
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -819,7 +819,7 @@ const setReactionSetting = async (req, res) => {
     const result = await chat.setReactionSetting(reactionCode)
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -872,7 +872,7 @@ const setDescription = async (req, res) => {
     const result = await chat.setDescription(newDescription)
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -946,7 +946,7 @@ const setProfilePicture = async (req, res) => {
     const result = await chat.setProfilePicture(messageMedia)
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 

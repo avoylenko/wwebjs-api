@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WWebJS API Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>WWebJS API Dashboard</h1>
+    <div class="header-actions">
+      <a id="apiDocsLink" class="header-link hidden" href="../api-docs" target="_blank" rel="noopener">API docs</a>
+      <div class="api-key-controls">
+        <input type="password" id="apiKeyInput" placeholder="API key (leave empty if not set)" autocomplete="off">
+        <button type="button" id="apiKeySaveBtn">Save</button>
+      </div>
+    </div>
+  </header>
+
+  <div id="apiKeyBanner" class="banner hidden">Invalid or missing API key &mdash; enter it above and press Save.</div>
+
+  <main>
+    <section class="toolbar">
+      <button type="button" id="addSessionBtn">Start session</button>
+      <div class="global-actions">
+        <button type="button" id="refreshBtn" class="secondary">Refresh</button>
+        <button type="button" id="terminateInactiveBtn" class="secondary danger">Terminate inactive</button>
+        <button type="button" id="terminateAllBtn" class="secondary danger">Terminate all</button>
+      </div>
+    </section>
+
+    <section>
+      <table>
+        <thead>
+          <tr>
+            <th>Session</th>
+            <th>Status</th>
+            <th class="actions-col">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="sessionsBody"></tbody>
+      </table>
+      <p id="emptyState" class="empty hidden">No active sessions. Start one above.</p>
+    </section>
+  </main>
+
+  <div id="startModal" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Start new session</h2>
+        <button type="button" class="close-btn" id="startCloseBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="addSessionForm" class="start-form">
+          <input type="text" id="newSessionId" placeholder="Session id" autocomplete="off">
+          <button type="submit" id="startSubmitBtn">Start</button>
+        </form>
+        <p id="addSessionError" class="field-error hidden"></p>
+      </div>
+    </div>
+  </div>
+
+  <div id="qrModal" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Link device &mdash; <span id="qrSessionName"></span></h2>
+        <button type="button" class="close-btn" id="qrCloseBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="qrWaiting" class="qr-placeholder">Waiting for QR code&hellip;</div>
+        <img id="qrImage" class="hidden" alt="WhatsApp QR code">
+        <div id="qrConnected" class="qr-success hidden">&#10003; Connected</div>
+        <p class="hint">Scan with WhatsApp on your phone: Settings &rarr; Linked devices &rarr; Link a device.</p>
+        <details>
+          <summary>Pair with phone number instead</summary>
+          <div class="pairing-form">
+            <input type="text" id="pairingPhone" placeholder="e.g. 12025550108" autocomplete="off">
+            <button type="button" id="pairingBtn">Get pairing code</button>
+          </div>
+          <div id="pairingCode" class="pairing-code hidden"></div>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <div id="detailsModal" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Session details &mdash; <span id="detailsSessionName"></span></h2>
+        <button type="button" class="close-btn" id="detailsCloseBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <dl id="detailsList"></dl>
+      </div>
+    </div>
+  </div>
+
+  <div id="toasts"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

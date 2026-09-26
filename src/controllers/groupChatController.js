@@ -25,7 +25,7 @@ const getClassInfo = async (req, res) => {
     if (!chat.isGroup) { throw new Error('The chat is not a group') }
     res.json({ success: true, chat })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -79,7 +79,7 @@ const addParticipants = async (req, res) => {
     const result = Object.keys(options).length ? await chat.addParticipants(participantIdsArray, options) : await chat.addParticipants(participantIdsArray)
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -127,7 +127,7 @@ const removeParticipants = async (req, res) => {
     const result = await chat.removeParticipants(participantIdsArray)
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -175,7 +175,7 @@ const promoteParticipants = async (req, res) => {
     const result = await chat.promoteParticipants(participantIdsArray)
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -223,7 +223,7 @@ const demoteParticipants = async (req, res) => {
     const result = await chat.demoteParticipants(participantIdsArray)
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -250,7 +250,7 @@ const getInviteCode = async (req, res) => {
     const inviteCode = await chat.getInviteCode()
     res.json({ success: true, inviteCode })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -294,7 +294,7 @@ const setSubject = async (req, res) => {
     const result = await chat.setSubject(subject)
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -338,7 +338,7 @@ const setDescription = async (req, res) => {
     const result = await chat.setDescription(description)
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -364,7 +364,7 @@ const leave = async (req, res) => {
     const result = await chat.leave()
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -393,7 +393,7 @@ const revokeInvite = async (req, res) => {
     const result = await chat.revokeInvite()
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -442,7 +442,7 @@ const setInfoAdminsOnly = async (req, res) => {
     const result = await chat.setInfoAdminsOnly(adminsOnly)
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -491,7 +491,7 @@ const setMessagesAdminsOnly = async (req, res) => {
     const result = await chat.setMessagesAdminsOnly(adminsOnly)
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -540,7 +540,7 @@ const setPicture = async (req, res) => {
     const result = await chat.setPicture(media)
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -565,7 +565,7 @@ const deletePicture = async (req, res) => {
     const result = await chat.deletePicture()
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -590,7 +590,7 @@ const getGroupMembershipRequests = async (req, res) => {
     const result = await chat.getGroupMembershipRequests()
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -633,7 +633,7 @@ const approveGroupMembershipRequests = async (req, res) => {
     const result = await chat.approveGroupMembershipRequests(options)
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -676,7 +676,7 @@ const rejectGroupMembershipRequests = async (req, res) => {
     const result = await chat.rejectGroupMembershipRequests(options)
     res.json({ success: true, result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 
@@ -733,7 +733,7 @@ const runMethod = async (req, res) => {
     const result = options ? await chat[method](options) : await chat[method]()
     res.json({ success: true, data: result })
   } catch (error) {
-    sendErrorResponse(res, 500, error.message)
+    sendErrorResponse(res, 500, error)
   }
 }
 

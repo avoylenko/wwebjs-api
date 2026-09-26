@@ -11,6 +11,7 @@ const maxAttachmentSize = parseInt(process.env.MAX_ATTACHMENT_SIZE) || 10000000
 const setMessagesAsSeen = (process.env.SET_MESSAGES_AS_SEEN || '').toLowerCase() === 'true'
 const disabledCallbacks = process.env.DISABLED_CALLBACKS ? process.env.DISABLED_CALLBACKS.split('|') : []
 const enableSwaggerEndpoint = (process.env.ENABLE_SWAGGER_ENDPOINT || '').toLowerCase() === 'true'
+const enableWebUI = (process.env.ENABLE_WEB_UI || '').toLowerCase() === 'true'
 const webVersion = process.env.WEB_VERSION
 const webVersionCacheType = process.env.WEB_VERSION_CACHE_TYPE || 'none'
 const rateLimitMax = parseInt(process.env.RATE_LIMIT_MAX) || 1000
@@ -25,6 +26,9 @@ const enableWebSocket = process.env.ENABLE_WEBSOCKET ? (process.env.ENABLE_WEBSO
 const autoStartSessions = process.env.AUTO_START_SESSIONS ? (process.env.AUTO_START_SESSIONS).toLowerCase() === 'true' : true
 const basePath = process.env.BASE_PATH || '/'
 const trustProxy = process.env.TRUST_PROXY ? (process.env.TRUST_PROXY).toLowerCase() === 'true' : false
+const proxyUrl = process.env.PROXY_URL || null
+const proxyUsername = process.env.PROXY_USERNAME ?? null
+const proxyPassword = process.env.PROXY_PASSWORD ?? null
 
 module.exports = {
   servicePort,
@@ -36,6 +40,7 @@ module.exports = {
   setMessagesAsSeen,
   disabledCallbacks,
   enableSwaggerEndpoint,
+  enableWebUI,
   webVersion,
   webVersionCacheType,
   rateLimitMax,
@@ -49,5 +54,8 @@ module.exports = {
   enableWebSocket,
   autoStartSessions,
   basePath,
-  trustProxy
+  trustProxy,
+  proxyUrl,
+  proxyUsername,
+  proxyPassword
 }

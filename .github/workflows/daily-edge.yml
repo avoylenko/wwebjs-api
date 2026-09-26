@@ -1,10 +1,9 @@
-name: CI/CD Pipeline for Docker Tag Push
+name: Daily Edge Docker Build
 
 on:
-  push:
-    tags:
-      - "v*"
-      - "edge"
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
 
 jobs:
   test:
@@ -23,7 +22,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Install edge version of whatsapp-web.js
-        if: github.ref_name == 'edge'
         run: |
           npm install --save-exact github:pedroslopez/whatsapp-web.js#main
       - name: Run tests
@@ -45,20 +43,12 @@ jobs:
         with:
           username: "${{ secrets.DOCKER_HUB_USERNAME }}"
           password: "${{ secrets.DOCKER_HUB_TOKEN }}"
-      - name: Extract metadata
-        id: meta
-        run: |
-          if [[ "${{ github.ref_name }}" == "edge" ]]; then
-            echo "tags=avoylenko/wwebjs-api:edge" >> $GITHUB_OUTPUT
-          else
-            echo "tags=avoylenko/wwebjs-api:${{ github.ref_name }},avoylenko/wwebjs-api:latest" >> $GITHUB_OUTPUT
-          fi
-      - name: Build and push with dynamic tag
+      - name: Build and push edge image
         uses: docker/build-push-action@v7
         with:
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: avoylenko/wwebjs-api:edge
           build-args: |
-            USE_EDGE=${{ github.ref_name == 'edge' }}
-          no-cache: ${{ github.ref_name == 'edge' }}
+            USE_EDGE=true
+          no-cache: true
