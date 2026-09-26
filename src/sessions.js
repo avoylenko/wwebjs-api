@@ -28,18 +28,17 @@ const saveWebhookConfig = async (sessionId, webhookUrl) => {
   }
 }
 
-const loadWebhookConfig = (sessionId) => {
+const loadWebhookConfig = async (sessionId) => {
   try {
-    const configPath = getWebhookConfigPath(sessionId)
-    if (fs.existsSync(configPath)) {
-      const data = JSON.parse(fs.readFileSync(configPath, 'utf8'))
-      if (data && data.webhookUrl) {
-        logger.info({ sessionId }, 'Webhook config loaded from disk')
-        return data.webhookUrl
-      }
+    const data = JSON.parse(await fs.promises.readFile(getWebhookConfigPath(sessionId), 'utf8'))
+    if (data?.webhookUrl) {
+      logger.info({ sessionId }, 'Webhook config loaded from disk')
+      return data.webhookUrl
     }
   } catch (error) {
-    logger.error({ sessionId, err: error }, 'Failed to load webhook config')
+    if (error.code !== 'ENOENT') {
+      logger.error({ sessionId, err: error }, 'Failed to load webhook config')
+    }
   }
   return null
 }
@@ -213,7 +212,7 @@ const setupSession = async (sessionId, options = {}) => {
     const client = new Client(clientOptions)
 
     // Webhook URL provided via API (null/empty clears it) takes precedence over the one persisted on disk
-    client.webhookUrl = options.webhookUrl !== undefined ? (options.webhookUrl || null) : loadWebhookConfig(sessionId)
+    client.webhookUrl = options.webhookUrl !== undefined ? (options.webhookUrl || null) : await loadWebhookConfig(sessionId)
 
     if (releaseBrowserLock) {
       // See https://github.com/puppeteer/puppeteer/issues/4860
