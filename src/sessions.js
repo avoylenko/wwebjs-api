@@ -105,24 +105,21 @@ const validateSession = async (sessionId) => {
 // ═══════════════════════════════════════════════════════════════════
 
 // Function to handle client session restoration
-const restoreSessions = () => {
+const restoreSessions = async () => {
   try {
-    if (!fs.existsSync(sessionFolderPath)) {
-      fs.mkdirSync(sessionFolderPath) // Create the session directory if it doesn't exist
-    }
+    await fs.promises.mkdir(sessionFolderPath, { recursive: true }) // Create the session directory if it doesn't exist
     // Read the contents of the folder
-    fs.readdir(sessionFolderPath, async (_, files) => {
-      // Iterate through the files in the parent folder
-      for (const file of files) {
-        // Use regular expression to extract the string from the folder name
-        const match = file.match(/^session-(.+)$/)
-        if (match) {
-          const sessionId = match[1]
-          logger.warn({ sessionId }, 'Existing session detected')
-          await setupSession(sessionId)
-        }
+    const files = await fs.promises.readdir(sessionFolderPath)
+    // Iterate through the files in the parent folder
+    for (const file of files) {
+      // Use regular expression to extract the string from the folder name
+      const match = file.match(/^session-(.+)$/)
+      if (match) {
+        const sessionId = match[1]
+        logger.warn({ sessionId }, 'Existing session detected')
+        await setupSession(sessionId)
       }
-    })
+    }
   } catch (error) {
     logger.error(error, 'Failed to restore sessions')
   }
