@@ -158,7 +158,7 @@
           "Session"
         ],
         "summary": "Start new session",
-        "description": "Starts a session for the given session ID.",
+        "description": "Starts a session for the given session ID. POST optionally accepts a webhookUrl in the body to configure a per-session webhook (null or empty string clears a saved one).",
         "parameters": [
           {
             "name": "sessionId",
@@ -181,6 +181,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Invalid webhookUrl."
           },
           "403": {
             "description": "Forbidden.",
@@ -218,6 +221,104 @@
             "apiKeyAuth": []
           }
         ]
+      },
+      "post": {
+        "tags": [
+          "Session"
+        ],
+        "summary": "Start new session",
+        "description": "Starts a session for the given session ID. POST optionally accepts a webhookUrl in the body to configure a per-session webhook (null or empty string clears a saved one).",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Unique identifier for the session (alphanumeric and - allowed)",
+            "example": "f8377d8d-a589-4242-9ba6-9486a04ef80c"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Status of the initiated session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StartSessionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid webhookUrl."
+          },
+          "403": {
+            "description": "Forbidden.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "webhookUrl": {
+                    "type": "string",
+                    "description": "Optional webhook URL for this session. Overrides BASE_WEBHOOK_URL and session env var.",
+                    "example": "https://your-server.com/webhook/my-session"
+                  }
+                }
+              }
+            },
+            "application/xml": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "webhookUrl": {
+                    "type": "string",
+                    "description": "Optional webhook URL for this session. Overrides BASE_WEBHOOK_URL and session env var.",
+                    "example": "https://your-server.com/webhook/my-session"
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/session/stop/{sessionId}": {
@@ -844,6 +945,208 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Unprocessable Entity.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          }
+        ]
+      }
+    },
+    "/session/setWebhook/{sessionId}": {
+      "put": {
+        "tags": [
+          "Session"
+        ],
+        "summary": "Set session webhook URL",
+        "description": "Set or update the webhook URL for an active session at runtime. Send an empty webhookUrl or null to clear and fall back to environment variables.",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Unique identifier for the session (alphanumeric and - allowed)",
+            "example": "f8377d8d-a589-4242-9ba6-9486a04ef80c"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Webhook URL updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "webhookUrl": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing or invalid webhookUrl."
+          },
+          "403": {
+            "description": "Forbidden.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Session not found."
+          },
+          "422": {
+            "description": "Unprocessable Entity.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "webhookUrl": {
+                    "type": "string",
+                    "description": "The webhook URL to set for this session. Send empty string or null to clear.",
+                    "example": "https://your-server.com/webhook/my-session"
+                  }
+                }
+              }
+            },
+            "application/xml": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "webhookUrl": {
+                    "type": "string",
+                    "description": "The webhook URL to set for this session. Send empty string or null to clear.",
+                    "example": "https://your-server.com/webhook/my-session"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session/getWebhook/{sessionId}": {
+      "get": {
+        "tags": [
+          "Session"
+        ],
+        "summary": "Get session webhook URL",
+        "description": "Get the current webhook URL for a session, including the source (runtime, env_session, env_global, or none).",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Unique identifier for the session (alphanumeric and - allowed)",
+            "example": "f8377d8d-a589-4242-9ba6-9486a04ef80c"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current webhook URL and source.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "webhookUrl": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string",
+                      "enum": [
+                        "runtime",
+                        "env_session",
+                        "env_global",
+                        "none"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Session not found (only started sessions are reported)."
           },
           "422": {
             "description": "Unprocessable Entity.",

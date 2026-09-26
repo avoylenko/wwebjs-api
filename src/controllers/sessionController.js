@@ -1,7 +1,16 @@
 const qr = require('qr-image')
-const { setupSession, deleteSession, reloadSession, validateSession, flushSessions, destroySession, sessions } = require('../sessions')
+const { setupSession, deleteSession, reloadSession, validateSession, flushSessions, destroySession, sessions, setSessionWebhook, getSessionWebhook } = require('../sessions')
 const { sendErrorResponse, waitForNestedObject, exposeFunctionIfAbsent } = require('../utils')
 const { logger } = require('../logger')
+
+// Accept only absolute http(s) URLs. Private/loopback hosts are allowed on purpose (e.g. local n8n), like BASE_WEBHOOK_URL
+const isValidWebhookUrl = (value) => {
+  try {
+    return typeof value === 'string' && ['http:', 'https:'].includes(new URL(value).protocol)
+  } catch {
+    return false
+  }
+}
 
 /**
  * Starts a session for the given session ID.
@@ -11,15 +20,41 @@ const { logger } = require('../logger')
  * @param {Object} req - The HTTP request object.
  * @param {Object} res - The HTTP response object.
  * @param {string} req.params.sessionId - The session ID to start.
+ * @param {string} [req.body.webhookUrl] - Optional webhook URL for this session.
  * @returns {Promise<void>}
  * @throws {Error} If there was an error starting the session.
  */
 const startSession = async (req, res) => {
   // #swagger.summary = 'Start new session'
-  // #swagger.description = 'Starts a session for the given session ID.'
+  // #swagger.description = 'Starts a session for the given session ID. POST optionally accepts a webhookUrl in the body to configure a per-session webhook (null or empty string clears a saved one).'
+  /*
+    #swagger.requestBody = {
+      required: false,
+      schema: {
+        type: 'object',
+        properties: {
+          webhookUrl: {
+            type: 'string',
+            description: 'Optional webhook URL for this session. Overrides BASE_WEBHOOK_URL and session env var.',
+            example: 'https://your-server.com/webhook/my-session'
+          }
+        }
+      }
+    }
+  */
   const sessionId = req.params.sessionId
   try {
-    const setupSessionReturn = await setupSession(sessionId)
+    // Optional webhookUrl from body (works for both GET with empty body and POST with JSON)
+    const webhookUrl = req.body?.webhookUrl
+    if (webhookUrl && !isValidWebhookUrl(webhookUrl)) {
+      /* #swagger.responses[400] = {
+        description: "Invalid webhookUrl."
+      }
+      */
+      return sendErrorResponse(res, 400, 'webhookUrl must be an absolute http(s) URL')
+    }
+
+    const setupSessionReturn = await setupSession(sessionId, { webhookUrl })
     if (!setupSessionReturn.success) {
       /* #swagger.responses[422] = {
         description: "Unprocessable Entity.",
@@ -48,6 +83,125 @@ const startSession = async (req, res) => {
   } catch (error) {
     logger.error({ sessionId, err: error }, 'Failed to start session')
     res.status(500).json({ success: false, error: error.message })
+  }
+}
+
+/**
+ * Set or update the webhook URL for an active session.
+ *
+ * @function
+ * @async
+ * @param {Object} req - The HTTP request object.
+ * @param {Object} res - The HTTP response object.
+ * @param {string} req.params.sessionId - The session ID.
+ * @param {string} req.body.webhookUrl - The new webhook URL (or null/empty to clear).
+ * @returns {Promise<void>}
+ */
+const setWebhook = async (req, res) => {
+  // #swagger.summary = 'Set session webhook URL'
+  // #swagger.description = 'Set or update the webhook URL for an active session at runtime. Send an empty webhookUrl or null to clear and fall back to environment variables.'
+  /*
+    #swagger.requestBody = {
+      required: true,
+      schema: {
+        type: 'object',
+        properties: {
+          webhookUrl: {
+            type: 'string',
+            description: 'The webhook URL to set for this session. Send empty string or null to clear.',
+            example: 'https://your-server.com/webhook/my-session'
+          }
+        }
+      }
+    }
+  */
+  const sessionId = req.params.sessionId
+  try {
+    if (!req.body || !('webhookUrl' in req.body)) {
+      /* #swagger.responses[400] = {
+        description: "Missing or invalid webhookUrl."
+      }
+      */
+      return sendErrorResponse(res, 400, 'webhookUrl is required (send null or empty string to clear)')
+    }
+    const { webhookUrl } = req.body
+    if (webhookUrl && !isValidWebhookUrl(webhookUrl)) {
+      return sendErrorResponse(res, 400, 'webhookUrl must be an absolute http(s) URL')
+    }
+    const result = await setSessionWebhook(sessionId, webhookUrl)
+    if (!result.success) {
+      /* #swagger.responses[404] = {
+        description: "Session not found."
+      }
+      */
+      return sendErrorResponse(res, 404, result.message)
+    }
+    /* #swagger.responses[200] = {
+      description: "Webhook URL updated.",
+      content: {
+        "application/json": {
+          schema: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              message: { type: 'string' },
+              webhookUrl: { type: 'string' }
+            }
+          }
+        }
+      }
+    }
+    */
+    res.json(result)
+  } catch (error) {
+    logger.error({ sessionId, err: error }, 'Failed to set session webhook')
+    sendErrorResponse(res, 500, error.message)
+  }
+}
+
+/**
+ * Get the current webhook URL for a session.
+ *
+ * @function
+ * @async
+ * @param {Object} req - The HTTP request object.
+ * @param {Object} res - The HTTP response object.
+ * @param {string} req.params.sessionId - The session ID.
+ * @returns {Promise<void>}
+ */
+const getWebhook = async (req, res) => {
+  // #swagger.summary = 'Get session webhook URL'
+  // #swagger.description = 'Get the current webhook URL for a session, including the source (runtime, env_session, env_global, or none).'
+  const sessionId = req.params.sessionId
+  try {
+    const result = getSessionWebhook(sessionId)
+    if (!result.success) {
+      /* #swagger.responses[404] = {
+        description: "Session not found (only started sessions are reported)."
+      }
+      */
+      return sendErrorResponse(res, 404, result.message)
+    }
+    /* #swagger.responses[200] = {
+      description: "Current webhook URL and source.",
+      content: {
+        "application/json": {
+          schema: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              webhookUrl: { type: 'string' },
+              source: { type: 'string', enum: ['runtime', 'env_session', 'env_global', 'none'] }
+            }
+          }
+        }
+      }
+    }
+    */
+    res.json(result)
+  } catch (error) {
+    logger.error({ sessionId, err: error }, 'Failed to get session webhook')
+    sendErrorResponse(res, 500, error.message)
   }
 }
 
@@ -467,5 +621,7 @@ module.exports = {
   terminateInactiveSessions,
   terminateAllSessions,
   getSessions,
-  getPageScreenshot
+  getPageScreenshot,
+  setWebhook,
+  getWebhook
 }

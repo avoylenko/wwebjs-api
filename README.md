@@ -155,6 +155,14 @@ By default, all callback events are delivered to the webhook defined with the `B
 This can be overridden by setting the `*_WEBHOOK_URL` environment variable, where `*` is your sessionId.
 For example, if you have the sessionId defined as `DEMO`, the environment variable must be `DEMO_WEBHOOK_URL`.
 
+The webhook can also be set per session through the API, without environment variables or a restart:
+
+- `POST /session/start/:sessionId` with body `{ "webhookUrl": "https://example.com/hook" }` starts a session with its own webhook.
+- `PUT /session/setWebhook/:sessionId` with body `{ "webhookUrl": "..." }` changes it at runtime. Send `null` or `""` to clear it.
+- `GET /session/getWebhook/:sessionId` returns the webhook in use and its source (`runtime`, `env_session`, `env_global` or `none`).
+
+Priority is: webhook set via the API, then `*_WEBHOOK_URL`, then `BASE_WEBHOOK_URL`. A webhook set via the API is saved in `SESSIONS_PATH/session-<sessionId>/webhook_config.json`, so it survives session restarts and server restarts, and it is removed when the session is terminated. Only absolute `http(s)` URLs are accepted.
+
 By setting the `DISABLED_CALLBACKS` environment variable you can specify what events you are **not** willing to receive on your webhook.
 
 By setting the `ENABLE_WEBHOOK` environment to `FALSE` you can disable webhook dispatching. This will help you if you want to switch to websocket method(see below).
