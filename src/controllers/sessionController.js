@@ -3,6 +3,15 @@ const { setupSession, deleteSession, reloadSession, validateSession, flushSessio
 const { sendErrorResponse, waitForNestedObject, exposeFunctionIfAbsent } = require('../utils')
 const { logger } = require('../logger')
 
+// Webhook URLs are server-side request targets, so accept only absolute http(s) URLs
+const isValidWebhookUrl = (value) => {
+  try {
+    return typeof value === 'string' && ['http:', 'https:'].includes(new URL(value).protocol)
+  } catch {
+    return false
+  }
+}
+
 /**
  * Starts a session for the given session ID.
  *
@@ -35,13 +44,17 @@ const startSession = async (req, res) => {
   */
   const sessionId = req.params.sessionId
   try {
-    // Read optional webhookUrl from body (works for both GET with empty body and POST with JSON)
-    const options = {}
-    if (req.body && req.body.webhookUrl) {
-      options.webhookUrl = req.body.webhookUrl
+    // Optional webhookUrl from body (works for both GET with empty body and POST with JSON)
+    const webhookUrl = req.body?.webhookUrl
+    if (webhookUrl && !isValidWebhookUrl(webhookUrl)) {
+      /* #swagger.responses[400] = {
+        description: "Invalid webhookUrl."
+      }
+      */
+      return sendErrorResponse(res, 400, 'webhookUrl must be an absolute http(s) URL')
     }
 
-    const setupSessionReturn = await setupSession(sessionId, options)
+    const setupSessionReturn = await setupSession(sessionId, { webhookUrl })
     if (!setupSessionReturn.success) {
       /* #swagger.responses[422] = {
         description: "Unprocessable Entity.",
@@ -104,8 +117,14 @@ const setWebhook = async (req, res) => {
   */
   const sessionId = req.params.sessionId
   try {
-    const { webhookUrl } = req.body || {}
-    const result = setSessionWebhook(sessionId, webhookUrl)
+    if (!req.body || !('webhookUrl' in req.body)) {
+      return sendErrorResponse(res, 400, 'webhookUrl is required (send null or empty string to clear)')
+    }
+    const { webhookUrl } = req.body
+    if (webhookUrl && !isValidWebhookUrl(webhookUrl)) {
+      return sendErrorResponse(res, 400, 'webhookUrl must be an absolute http(s) URL')
+    }
+    const result = await setSessionWebhook(sessionId, webhookUrl)
     if (!result.success) {
       return sendErrorResponse(res, 404, result.message)
     }

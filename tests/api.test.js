@@ -95,6 +95,56 @@ describe('API Authentication Tests', () => {
   })
 })
 
+describe('Session webhook Tests', () => {
+  it('should reject an invalid webhookUrl on start', async () => {
+    const response = await request(app).post('/session/start/5').set('x-api-key', 'test_api_key')
+      .send({ webhookUrl: 'file:///etc/passwd' })
+    expect(response.status).toBe(400)
+    expect(fs.existsSync('./sessions_test/session-5')).toBe(false)
+  })
+
+  it('should return 404 for webhook endpoints of an unknown session', async () => {
+    const response = await request(app).get('/session/getWebhook/unknown').set('x-api-key', 'test_api_key')
+    expect(response.status).toBe(404)
+    const response2 = await request(app).put('/session/setWebhook/unknown').set('x-api-key', 'test_api_key')
+      .send({ webhookUrl: 'https://example.com/hook' })
+    expect(response2.status).toBe(404)
+  })
+
+  it('should start with, update, persist and clear a session webhook', async () => {
+    const configPath = './sessions_test/session-6/webhook_config.json'
+    const response = await request(app).post('/session/start/6').set('x-api-key', 'test_api_key')
+      .send({ webhookUrl: 'http://127.0.0.1:9/a' })
+    expect(response.status).toBe(200)
+    expect(JSON.parse(fs.readFileSync(configPath, 'utf-8'))).toEqual({ webhookUrl: 'http://127.0.0.1:9/a' })
+
+    const response2 = await request(app).get('/session/getWebhook/6').set('x-api-key', 'test_api_key')
+    expect(response2.body).toEqual({ success: true, webhookUrl: 'http://127.0.0.1:9/a', source: 'runtime' })
+
+    const response3 = await request(app).put('/session/setWebhook/6').set('x-api-key', 'test_api_key').send({})
+    expect(response3.status).toBe(400)
+
+    const response4 = await request(app).put('/session/setWebhook/6').set('x-api-key', 'test_api_key')
+      .send({ webhookUrl: 'not a url' })
+    expect(response4.status).toBe(400)
+
+    const response5 = await request(app).put('/session/setWebhook/6').set('x-api-key', 'test_api_key')
+      .send({ webhookUrl: 'http://127.0.0.1:9/b' })
+    expect(response5.status).toBe(200)
+    expect(JSON.parse(fs.readFileSync(configPath, 'utf-8'))).toEqual({ webhookUrl: 'http://127.0.0.1:9/b' })
+
+    const response6 = await request(app).put('/session/setWebhook/6').set('x-api-key', 'test_api_key')
+      .send({ webhookUrl: null })
+    expect(response6.status).toBe(200)
+    expect(fs.existsSync(configPath)).toBe(false)
+    const response7 = await request(app).get('/session/getWebhook/6').set('x-api-key', 'test_api_key')
+    expect(response7.body).toEqual({ success: true, webhookUrl: process.env.BASE_WEBHOOK_URL, source: 'env_global' })
+
+    const response8 = await request(app).get('/session/terminate/6').set('x-api-key', 'test_api_key')
+    expect(response8.status).toBe(200)
+  })
+})
+
 describe('API Action Tests', () => {
   it('should setup, create at least a QR, and terminate a client session', async () => {
     const response = await request(app).get('/session/start/4').set('x-api-key', 'test_api_key')

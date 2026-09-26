@@ -43,7 +43,7 @@ const loadWebhookConfig = (sessionId) => {
     if (fs.existsSync(configPath)) {
       const data = JSON.parse(fs.readFileSync(configPath, 'utf8'))
       if (data && data.webhookUrl) {
-        logger.info({ sessionId, webhookUrl: data.webhookUrl }, 'Webhook config loaded from disk')
+        logger.info({ sessionId }, 'Webhook config loaded from disk')
         return data.webhookUrl
       }
     }
@@ -129,9 +129,7 @@ const restoreSessions = () => {
         if (match) {
           const sessionId = match[1]
           logger.warn({ sessionId }, 'Existing session detected')
-          // Load persisted webhook config if available
-          const savedWebhookUrl = loadWebhookConfig(sessionId)
-          await setupSession(sessionId, savedWebhookUrl ? { webhookUrl: savedWebhookUrl } : {})
+          await setupSession(sessionId)
         }
       }
     })
@@ -223,11 +221,8 @@ const setupSession = async (sessionId, options = {}) => {
 
     const client = new Client(clientOptions)
 
-    // Store custom webhook URL on client if provided via API or loaded from disk
-    if (options.webhookUrl) {
-      client.webhookUrl = options.webhookUrl
-      logger.info({ sessionId, webhookUrl: options.webhookUrl }, 'Custom webhook URL configured for session')
-    }
+    // Webhook URL provided via API takes precedence over the one persisted on disk
+    client.webhookUrl = options.webhookUrl || loadWebhookConfig(sessionId)
 
     if (releaseBrowserLock) {
       // See https://github.com/puppeteer/puppeteer/issues/4860
@@ -244,14 +239,14 @@ const setupSession = async (sessionId, options = {}) => {
         patchWWebLibrary(client).catch((err) => {
           logger.error({ sessionId, err }, 'Failed to patch WWebJS library')
         })
-        // Persist webhook config to disk once session folder is ready
-        if (options.webhookUrl) {
-          saveWebhookConfig(sessionId, options.webhookUrl)
-        }
       })
       initWebSocketServer(sessionId)
       initializeEvents(client, sessionId)
       await client.initialize()
+      // Session folder exists after initialize, persist webhook config so it survives restarts
+      if (options.webhookUrl) {
+        await saveWebhookConfig(sessionId, options.webhookUrl)
+      }
     } catch (error) {
       logger.error({ sessionId, err: error }, 'Initialize error')
       throw error
@@ -270,15 +265,15 @@ const setupSession = async (sessionId, options = {}) => {
 // ═══════════════════════════════════════════════════════════════════
 
 // Function to set webhook URL for an active session at runtime
-const setSessionWebhook = (sessionId, webhookUrl) => {
+const setSessionWebhook = async (sessionId, webhookUrl) => {
   const client = sessions.get(sessionId)
   if (!client) {
     return { success: false, message: 'session_not_found' }
   }
   client.webhookUrl = webhookUrl || null
   // Persist to disk so it survives server restarts
-  saveWebhookConfig(sessionId, webhookUrl)
-  logger.info({ sessionId, webhookUrl: webhookUrl || '(cleared, using default)' }, 'Session webhook URL updated')
+  await saveWebhookConfig(sessionId, client.webhookUrl)
+  logger.info({ sessionId, cleared: !client.webhookUrl }, 'Session webhook URL updated')
   return { success: true, message: 'Webhook URL updated successfully', webhookUrl: client.webhookUrl }
 }
 
@@ -309,11 +304,9 @@ const initializeEvents = (client, sessionId) => {
   if (recoverSessions) {
     waitForNestedObject(client, 'pupPage').then(() => {
       const restartSession = async (sessionId) => {
-        // Preserve webhook URL across restarts (also persisted on disk)
-        const savedWebhookUrl = client.webhookUrl
         sessions.delete(sessionId)
         await client.destroy().catch(e => { })
-        await setupSession(sessionId, { webhookUrl: savedWebhookUrl })
+        await setupSession(sessionId)
       }
       client.pupPage.once('close', function () {
         // emitted when the page closes
@@ -590,8 +583,6 @@ const reloadSession = async (sessionId) => {
     if (!client) {
       return
     }
-    // Preserve webhook URL across reloads (also persisted on disk)
-    const savedWebhookUrl = client.webhookUrl
     client.pupPage?.removeAllListeners('close')
     client.pupPage?.removeAllListeners('error')
     try {
@@ -608,7 +599,7 @@ const reloadSession = async (sessionId) => {
       }
     }
     sessions.delete(sessionId)
-    await setupSession(sessionId, { webhookUrl: savedWebhookUrl })
+    await setupSession(sessionId)
   } catch (error) {
     logger.error({ sessionId, err: error }, 'Failed to reload session')
     throw error
