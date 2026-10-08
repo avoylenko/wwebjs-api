@@ -1,6 +1,6 @@
 const { MessageMedia, Location, Poll } = require('whatsapp-web.js')
 const { sessions } = require('../sessions')
-const { sendErrorResponse } = require('../utils')
+const { sendErrorResponse, logMissingMessage } = require('../utils')
 
 /**
  * Send a message to a chat using the WhatsApp API
@@ -108,6 +108,18 @@ const sendMessage = async (req, res) => {
       }
       default:
         return sendErrorResponse(res, 400, 'invalid contentType')
+    }
+    // The library looks the message up only after it has already handed it to the chat, so
+    // nothing coming back does not mean nothing was sent - answering 500 here would invite the
+    // caller to retry a message the contact has already received. Say plainly that the message
+    // is missing instead, and report what the page looked like so the cause is not guesswork.
+    if (!messageOut) {
+      await logMissingMessage(client, chatId)
+      return res.json({
+        success: true,
+        message: null,
+        warning: 'whatsapp-web.js did not return the sent message; it may still have been delivered'
+      })
     }
     res.json({ success: true, message: messageOut })
   } catch (error) {

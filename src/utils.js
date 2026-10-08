@@ -80,6 +80,50 @@ const exposeFunctionIfAbsent = async (page, name, fn) => {
   await page.exposeFunction(name, fn)
 }
 
+// Called when the library sends a message but hands nothing back. Reports what the page looks
+// like at that moment so the failure can be told apart from a plain rename: whether a fresh
+// MsgKey exposes `_serialized`, and how the keys of the messages already in the chat are shaped.
+const logMissingMessage = async (client, chatId) => {
+  try {
+    const snapshot = await client.pupPage.evaluate(async (chatId) => {
+      const probe = (() => {
+        try {
+          const MsgKey = window.require('WAWebMsgKey')
+          const wid = window.require('WAWebWidFactory').createWid('0@c.us')
+          const key = new MsgKey({ from: wid, to: wid, id: 'WWEBJSAPIPROBE', selfDir: 'out' })
+          return { serialized: key._serialized, fields: Object.keys(key) }
+        } catch (error) {
+          return { error: error.message }
+        }
+      })()
+
+      const lastOutgoing = await (async () => {
+        try {
+          const chat = await window.WWebJS.getChat(chatId, { getAsModel: false })
+          const msgs = (chat && chat.msgs && chat.msgs.getModelsArray()) || []
+          for (let i = msgs.length - 1; i >= 0; i--) {
+            const id = msgs[i] && msgs[i].id
+            if (!id || !id.fromMe) { continue }
+            return {
+              serialized: id._serialized,
+              fields: Object.keys(id),
+              foundInCollection: !!window.require('WAWebCollections').Msg.get(id._serialized)
+            }
+          }
+          return { error: 'no outgoing message in this chat' }
+        } catch (error) {
+          return { error: error.message }
+        }
+      })()
+
+      return { waVersion: window.Debug && window.Debug.VERSION, probe, lastOutgoing }
+    }, chatId)
+    logger.warn({ chatId, ...snapshot }, 'Sent message was not returned by the library')
+  } catch (error) {
+    logger.warn({ chatId, err: error }, 'Sent message was not returned by the library')
+  }
+}
+
 const patchWWebLibrary = async (client) => {
   // MUST be run after the 'ready' event fired
   Client.prototype.getChats = async function (searchOptions = {}) {
@@ -164,5 +208,6 @@ module.exports = {
   decodeBase64,
   sleep,
   exposeFunctionIfAbsent,
+  logMissingMessage,
   patchWWebLibrary
 }
