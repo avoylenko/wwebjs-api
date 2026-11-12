@@ -9,26 +9,25 @@
     "swagger": "node swagger.js"
   },
   "dependencies": {
-    "axios": "^1.15.2",
     "cors": "^2.8.6",
     "dotenv": "^16.6.1",
-    "express": "^4.22.1",
+    "express": "^4.22.3",
     "express-rate-limit": "^7.5.1",
-    "pino": "^9.14.0",
+    "pino": "^10.4.0",
     "qr-image": "^3.2.0",
     "qrcode-terminal": "^0.12.0",
     "swagger-ui-express": "^5.0.1",
-    "whatsapp-web.js": "^1.34.7",
-    "ws": "^8.20.0"
+    "whatsapp-web.js": "^1.34.8",
+    "ws": "^8.22.2"
   },
   "devDependencies": {
-    "eslint": "^8.38.0",
-    "eslint-config-standard": "^17.0.0",
-    "eslint-plugin-import": "^2.27.5",
+    "eslint": "^8.57.1",
+    "eslint-config-standard": "^17.1.0",
+    "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-n": "^15.7.0",
-    "eslint-plugin-promise": "^6.1.1",
-    "jest": "^30.4.2",
-    "supertest": "^7.2.2",
+    "eslint-plugin-promise": "^6.6.0",
+    "jest": "^30.5.2",
+    "supertest": "^7.3.0",
     "swagger-autogen": "^2.23.7"
   },
   "keywords": [
@@ -38,8 +37,7 @@
     "api",
     "wrapper",
     "rest",
-    "express",
-    "axios"
+    "express"
   ],
   "author": {
     "name": "Anton Voylenko",
@@ -47,7 +45,7 @@
   },
   "license": "MIT",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "repository": {
     "type": "git",

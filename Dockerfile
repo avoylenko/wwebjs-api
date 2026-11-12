@@ -8,7 +8,8 @@ FROM node-${TARGETARCH} AS base
 ENV CHROME_BIN="/usr/bin/chromium" \
     PUPPETEER_EXECUTABLE_PATH="/usr/bin/chromium" \
     PUPPETEER_SKIP_CHROMIUM_DOWNLOAD="true" \
-    NODE_ENV="production"
+    NODE_ENV="production" \
+    NODE_USE_ENV_PROXY="1"
 
 WORKDIR /usr/src/app
 

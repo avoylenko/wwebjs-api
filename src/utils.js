@@ -1,14 +1,23 @@
-const axios = require('axios')
+const http = require('http')
 const { globalApiKey, disabledCallbacks, enableWebHook } = require('./config')
 const { logger } = require('./logger')
 const ChatFactory = require('whatsapp-web.js/src/factories/ChatFactory')
 const Client = require('whatsapp-web.js').Client
 const { Chat, Message } = require('whatsapp-web.js/src/structures')
 
+// Make fetch obey HTTP_PROXY / HTTPS_PROXY / NO_PROXY
+// shortcut: needs Node >= 24.14, older versions skip the proxy; there set NODE_USE_ENV_PROXY=1 (Node >= 22.21)
+http.setGlobalProxyFromEnv?.()
+
 // Trigger webhook endpoint
 const triggerWebhook = (webhookURL, sessionId, dataType, data) => {
   if (enableWebHook) {
-    axios.post(webhookURL, { dataType, data, sessionId }, { headers: { 'x-api-key': globalApiKey } })
+    fetch(webhookURL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': globalApiKey },
+      body: JSON.stringify({ dataType, data, sessionId })
+    })
+      .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`) })
       .then(() => logger.debug({ sessionId, dataType, data: data || '' }, `Webhook message sent to ${webhookURL}`))
       .catch(error => logger.error({ sessionId, dataType, err: error, data: data || '' }, `Failed to send webhook message to ${webhookURL}`))
   }
